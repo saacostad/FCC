@@ -1,6 +1,7 @@
 from os import listdir  # Library used to read the datafile names
 
 import numpy as np  # Will be helpful specially for array manipulation
+import pandas as pd  # Even though tfs imports it, I need to use special functions of pandas
 import tfs  # CERN package to read .tsf files. It already imports pandas and other useful libraries
 
 """
@@ -36,7 +37,7 @@ data_files = listdir("data")
 file_path = "data/" + data_files[FILE_NO - 1]
 
 # Save all the data from the .tsf file
-rawData = tfs.read(file_path)
+rawData = pd.DataFrame(tfs.read(file_path))
 
 
 """
@@ -72,6 +73,38 @@ NEAR_IP_QP_WINDOW.
 """
 
 
+def Check_rows(df, Selection=int(SELECTED_QP / 2), Columns=["BETX", "BETY"]):
+    """function that takes a dataframe of quadrupoles, selects the ones with the bests beta functions, checks there are no repeated quadrupoles
+    on the selection for both planes, and returns 2 dataframes with only the best quadrupoles"""
+
+    dfSorted_bX = df.sort_values(by=f"{Columns[0]}", ascending=False)
+    dfSorted_bY = df.sort_values(by=f"{Columns[1]}", ascending=False)
+
+    dfSelected_bX = dfSorted_bX.head(Selection)
+    dfSelected_bY = dfSorted_bY.head(Selection)
+
+    counter = 1
+
+    while True:
+        merged = pd.merge(dfSelected_bX, dfSelected_bY, how="left", indicator=True)
+
+        common_rows = pd.DataFrame(merged[merged["_merge"] == "both"])
+
+        if common_rows.empty:
+            break
+        else:
+            for row in common_rows.itertuples(index=False):
+                dfSelected_bY[dfSelected_bY["NAME"] == f"{row[0]}"] = dfSorted_bY.iloc[
+                    [Selection + counter + 1]
+                ]
+                dfSelected_bY = dfSelected_bY.sort_values(
+                    by=f"{Columns[1]}", ascending=False
+                )
+                counter = +1
+
+    return (dfSelected_bX, dfSelected_bY)
+
+
 def Select_Quadrupoles(
     IPnumber, window=NEAR_IP_QP_WINDOW, selection=int(SELECTED_QP / 2)
 ):
@@ -87,27 +120,60 @@ def Select_Quadrupoles(
 
     # Look for the closest quadrupole to the IP using np.searchsorted
     Closest_QP_index = np.searchsorted(QP_indexes, IP_index)
-    Closest_QP = QP_indexes[Closest_QP_index]
+
+    df = dfQUADRUPOLE.copy()
+    df = pd.concat([df.tail(NEAR_IP_QP_WINDOW), df])
+    df = pd.concat([df, dfQUADRUPOLE.head(NEAR_IP_QP_WINDOW)])
+
+    Closest_QP_index += NEAR_IP_QP_WINDOW
+    Closest_QP = df.index[Closest_QP_index]
 
     # Create dataFrames for each side of the IP
     if Closest_QP > IP_index:
-        rightSide_QP = dfQUADRUPOLE.iloc[
-            Closest_QP_index : Closest_QP_index + NEAR_IP_QP_WINDOW
-        ]
-        leftSide_QP = dfQUADRUPOLE.iloc[
-            Closest_QP_index - NEAR_IP_QP_WINDOW : Closest_QP_index
-        ]
+        print("AAAAAAAAA")
+        rightSide_QP = df.iloc[Closest_QP_index : Closest_QP_index + NEAR_IP_QP_WINDOW]
+        leftSide_QP = df.iloc[Closest_QP_index - NEAR_IP_QP_WINDOW : Closest_QP_index]
     else:
-        rightSide_QP = dfQUADRUPOLE.iloc[
-            Closest_QP_index - 1 - NEAR_IP_QP_WINDOW : Closest_QP_index
+        print("RRRRRRRRRRRRRRR")
+        rightSide_QP = df.iloc[
+            Closest_QP_index + 1 : Closest_QP_index + NEAR_IP_QP_WINDOW + 1
         ]
-        leftSide_QP = dfQUADRUPOLE.iloc[
-            Closest_QP_index : Closest_QP_index + NEAR_IP_QP_WINDOW - 1
-        ]
+        leftSide_QP = df.iloc[Closest_QP_index - NEAR_IP_QP_WINDOW : Closest_QP_index]
 
-    print(leftSide_QP)
-    print(dfIP[dfIP["NAME"] == f"IP.{IPnumber}"])
-    print(rightSide_QP)
+    leftSide_selected_X, leftSide_selected_Y = Check_rows(leftSide_QP)
+    rightSide_selected_X, rightSide_selected_Y = Check_rows(rightSide_QP)
+
+    return (
+        leftSide_selected_X,
+        leftSide_selected_Y,
+        rightSide_selected_X,
+        rightSide_selected_Y,
+    )
 
 
-Select_Quadrupoles(6)
+for i in [1, 8]:
+    print(f"ITERACION {i}")
+    QP = Select_Quadrupoles(i)
+    print(f" FOR INTERACTION REGION NO {i}:")
+    print()
+    print()
+
+    print("--------------------------")
+    print("Left side quadrupoles:")
+    print("BETA X:")
+    print(QP[0])
+
+    print()
+
+    print("BETA Y:")
+    print(QP[1])
+
+    print("--------------------------")
+    print("Right side quadrupoles:")
+    print("BETA X:")
+    print(QP[2])
+
+    print()
+
+    print("BETA Y:")
+    print(QP[3])
