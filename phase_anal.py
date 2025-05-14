@@ -83,7 +83,21 @@ def Check_rows(df, Selection=int(SELECTED_QP / 2), Columns=["BETX", "BETY"]):
     dfSelected_bX = dfSorted_bX.head(Selection)
     dfSelected_bY = dfSorted_bY.head(Selection)
 
-    counter = 1
+    """
+    print("SORTED X")
+    print(dfSorted_bX)
+
+    print()
+
+    print("SORTED Y")
+    print(dfSorted_bY)
+
+    print()
+    print()
+    """
+
+    # TODO: I think, I'm really not sure, there are some selection rules that are not working properly: IP1 and IP8 are the same elements, but the sorted dataframe from these two change in one index, so there might be something wrong.
+    counter = 0
 
     while True:
         merged = pd.merge(dfSelected_bX, dfSelected_bY, how="left", indicator=True)
@@ -94,14 +108,27 @@ def Check_rows(df, Selection=int(SELECTED_QP / 2), Columns=["BETX", "BETY"]):
             break
         else:
             for row in common_rows.itertuples(index=False):
-                dfSelected_bY[dfSelected_bY["NAME"] == f"{row[0]}"] = dfSorted_bY.iloc[
-                    [Selection + counter + 1]
-                ]
+                """
+                print("Selected X:")
+                print(dfSelected_bX)
+
+                print("Selected Y:")
+                print(dfSelected_bY)
+
+                print(f"row[0]: {row[0]}")
+                print(
+                    f"First Selected: {dfSelected_bY[dfSelected_bY['NAME'] == f'{row[0]}']}"
+                )
+                print(f"Replace: {dfSorted_bY.iloc[[Selection + counter]]}")
+                """
+                dfSelected_bY.iloc[dfSelected_bY["NAME"] == f"{row[0]}"] = (
+                    dfSorted_bY.iloc[[Selection + counter]]
+                )
                 dfSelected_bY = dfSelected_bY.sort_values(
                     by=f"{Columns[1]}", ascending=False
                 )
-                counter = +1
-
+                counter += 1
+                # TODO: by now, the only betas that are being replaced are the betaY, but there are cases where betaX is a better choice to be replaced. That is, add logic to check wheter to change BETAX or BETAY
     return (dfSelected_bX, dfSelected_bY)
 
 
