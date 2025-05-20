@@ -2,6 +2,8 @@
 
 In this repository you'll find tools and scripts developed for commisioning of the FCC, specially, related to the implementation of the APJ method for quadrupole corrections. 
 
+__NOTE:__ for now, there are no main executable files as it is a project under development.
+
 ## Phase-Beta functions analysis
 For the development of the APJ method, some analysis of the lattice functions for the FCC was needed, specially, the behaviour of the phase and beta functions on near-IP quatrupoles. This analysis is found on 'phase_anal.py'.
 
