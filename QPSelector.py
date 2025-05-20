@@ -36,7 +36,7 @@ Just reading the data using the tfs module, which will store the read table in a
 
 # Get the datafiles names of the Twiss files just to select
 # which one we'll do the analysis with
-data_files = listdir("data")
+data_files = [f for f in listdir("data") if f.endswith(".tfs")]
 
 # Save the name of the file chosen
 file_path = "data/" + data_files[FILE_NO - 1]
