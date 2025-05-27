@@ -106,7 +106,9 @@ def Check_rows(df, Selection=int(SELECTED_QP / 2), Columns=["BETX", "BETY"]):
                 )
 
                 dfSelected_bY = dfSelected_bY.sort_values(
-                    by=f"{Columns[1]}", ascending=False
+                    by=f"{Columns[1]}",
+                    ascending=False,
+                    # by = "S", ascending = True
                 )
 
                 # Increase the counter just in case we have to replace the QP again
@@ -114,7 +116,7 @@ def Check_rows(df, Selection=int(SELECTED_QP / 2), Columns=["BETX", "BETY"]):
                 # TODO: by now, the only betas that are being replaced are the betaY, but there are cases where betaX is a better choice to be replaced. That is, add logic to check wheter to change BETAX or BETAY
 
     # Return the selected quadrupoles
-    return (dfSelected_bX, dfSelected_bY)
+    return (dfSelected_bX.sort_values(by="S"), dfSelected_bY.sort_values(by="S"))
 
 
 def Select_Quadrupoles(
@@ -194,7 +196,7 @@ def PrintQuadrupoles():
 """         MAIN EXECUTION      """
 
 # The main dictionary to be created, were the data of the QPs is saved
-QPdict = None
+selectedQP = None
 
 
 def MainFunction():
@@ -202,11 +204,6 @@ def MainFunction():
 
     data = [Select_Quadrupoles(i) for i in range(1, 9)]
 
-    QPdict = pd.DataFrame(data, columns=keys)
+    selectedQP = pd.DataFrame(data, columns=keys)
 
-    return QPdict
-
-
-if __name__ == "__main__":
-    df = MainFunction()
-    # Qprint(df.iloc[0, 2])
+    return selectedQP
