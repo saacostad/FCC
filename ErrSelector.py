@@ -6,6 +6,7 @@ the error corrections accoring to the calculated theory (or something like that)
 from math import cos, sin
 
 import numpy as np
+import pandas as pd
 
 from QPphysicalParam import (
     getQP as QPphysParam,
@@ -33,17 +34,97 @@ VP0s = [1.58772647432, 1.59059853389, 1.20002337969, -0.520781188437]
 
 
 # This is the error we're gonna try to recreate
-ERR = [0.000003] * 8
-
-
-# A value for the lattice function to choose
-phi_s = 400.0
+ERRs = np.array(list(range(1, 9))) * 10 ** (-5)
 
 
 """
     FUNCTION DEFINITIONS
 In this part, we define different functions to make the script more readable
 """
+
+
+def linearTermMatrix(quadrupoles):
+    """This function takes una region number and creates the matrix from which one can get the linear terms"""
+
+    # left = selectedQP.loc[reg - 1, "leftX"]
+    # right = selectedQP.loc[reg - 1, "rightX"]
+    #
+    # quadrupoles = pd.concat([left, right])
+
+    # We create the matrix with only the linear terms, which are \beta_i \sin(\psi_i) \cos(\psi_i)
+    return np.diag(
+        quadrupoles.apply(
+            lambda qp: qp["BETX"] * sin(qp["MUX"]) * cos(qp["MUX"]), axis=1
+        )  # This is the function that creates the matrix elements
+    )
+
+
+def secondOrderVector(qp, err=ERRs):
+    """Similar to the previous one, this function creates a vector where each element corresponds to the second order terms
+    of the equation, given an errors array err"""
+
+    # For this first part, we'll create a vector array where it's first element is 0, and all the other elements are \cos(\psi_i) \beta_i B_ilinVector
+    linVector = np.array(
+        [0]
+        + [qp.iloc[i]["BETX"] * cos(qp.iloc[i]["MUX"]) * err[i] for i in range(1, 8)]
+    )
+
+    # To create the next term, which takes into account the no linear terms, we have to create a strict lower triangular matrix whose i, j elements are
+    # T_{i, j} = \beta_i sin(\psi_i) sin(\psi_j - \psi_i). Matrix T which multuplied by the errors vector, will give the non linear vector VJ
+
+    def nonLinearMatrixTerms(vi, vj):
+        """Function that, given an i, j entry of the matrix, returns the corresponding element"""
+
+        i = int(vj)  # We have to cast the integer or else it explodes
+        j = int(vi)
+
+        return (
+            qp.iloc[i]["BETX"]
+            * sin(qp.iloc[i]["MUX"])
+            * sin(qp.iloc[j]["MUX"] - qp.iloc[i]["MUX"])
+        )
+
+    # We create the corresponding matrix given the element-wise rule
+    nonLinearMatrix = np.fromfunction(
+        np.vectorize(nonLinearMatrixTerms), (8, 8), dtype=np.double
+    )
+
+    # We're only interested in the strictly lower half of the matrix
+    nonLinearMatrix = np.tril(nonLinearMatrix, k=-1)
+
+    # Now, we multiply the matrix by the errors values
+    secondOrderVector = nonLinearMatrix @ err
+    print(qp)
+    # Finally, we have to return the convolution of the linear and the second order vectors
+    return linVector * secondOrderVector
+
+
+left = selectedQP.loc[0, "leftX"]
+right = selectedQP.loc[0, "rightX"]
+
+quadrupoles = pd.concat([left, right])
+
+print(secondOrderVector(quadrupoles))
+
+
+def ErrorSimulation(errors, reg):
+    """Takes a vector of errors that will be simulated on the 8 quadrupoles and
+    outputs the value of the 2nd order equation for error"""
+
+    left = selectedQP.loc[reg - 1, "leftX"]
+    right = selectedQP.loc[reg - 1, "rightX"]
+
+    quadrupoles = pd.concat([left, right])
+
+    print(quadrupoles)
+
+    firstOrderTerm = sum(
+        quadrupoles.apply(
+            lambda qp: qp["KL"] * qp["BETX"] * sin(qp["MUX"]) * cos(qp["MUX"]), axis=1
+        )
+    )
+
+    return firstOrderTerm
 
 
 def createRowKL(df):
@@ -140,6 +221,3 @@ def findLinearSolutions(reg):
     Corrections = np.linalg.solve(A, Sol)
 
     return Corrections
-
-
-print(findLinearSolutions(1))
