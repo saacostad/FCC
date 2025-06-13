@@ -36,17 +36,6 @@ TRESHOLD = 0.8e-5
 ERRs = np.array(list(range(1, 9))) * 10 ** (-7)
 
 """
-    ACTION AND PHASE FOR EACH IP
-The nominal action and phase are pretty much constants on each side of IP, so, we bring them here manually
-NOTE: at first, this doesn't matter, but who knows if in the future they will
-"""
-
-HJ0s = [1.57318230159e-10, 1.59040817156e-10, 1.93292075956e-11, 4.33351930746e-11]
-VJ0s = [1.09287769985e-13, 1.07739134429e-13, 9.28858562765e-10, 9.45894676299e-10]
-HP0s = [0.587739114054, 0.588883553621, -2.15738114587, 2.479568333]
-VP0s = [1.58772647432, 1.59059853389, 1.20002337969, -0.520781188437]
-
-"""
     FUNCTION DEFINITIONS
 In this part, we define different functions to make the script more readable
 """
