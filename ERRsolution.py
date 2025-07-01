@@ -36,7 +36,7 @@ TRESHOLD = 0.8e-5
 
 
 # This is the error we're gonna try to recreate
-ERRs = np.array(list(range(1, 9))) * 10 ** (-7)
+ERRs = np.array(list(range(1, 9))) * 10 ** (-2)
 
 
 """
@@ -79,7 +79,7 @@ has the information of all the Non-linear (up to the second term) terms of the e
 # -----------------------------------------------------------------------------------------
 
 
-def firstOrderMatrixRows(quadrupoles, term, plane="X"):
+def firstOrderMatrixRows(quadrupoles, term, plane):
     """Creates a row for the First Order Matrix given the quadrupoles dataframe,
     the term number (the row for the X plane) and the plane"""
 
@@ -87,7 +87,7 @@ def firstOrderMatrixRows(quadrupoles, term, plane="X"):
         case 2:
             return np.array(
                 [
-                    quadrupoles.iloc[i][f"BET{plane}"]
+                    -quadrupoles.iloc[i][f"BET{plane}"]
                     * sin(quadrupoles.iloc[i][f"MU{plane}"]) ** 2
                     for i in range(0, 8)
                 ]
@@ -96,7 +96,7 @@ def firstOrderMatrixRows(quadrupoles, term, plane="X"):
         case 3:
             return np.array(
                 [
-                    quadrupoles.iloc[i][f"BET{plane}"]
+                    -quadrupoles.iloc[i][f"BET{plane}"]
                     * cos(quadrupoles.iloc[i][f"MU{plane}"]) ** 2
                     for i in range(0, 8)
                 ]
@@ -117,20 +117,17 @@ def FirstOrderMatrix(quadrupoles):
     """This function creates the matrix for the first order terms of the problem,
     given the dataframe of the quadrupoles to analyse"""
 
-    return (
-        np.array(
-            [
-                firstOrderMatrixRows(quadrupoles, 1, "X"),
-                firstOrderMatrixRows(quadrupoles, 2, "X"),
-                firstOrderMatrixRows(quadrupoles, 3, "X"),
-                firstOrderMatrixRows(quadrupoles, 4, "X"),
-                firstOrderMatrixRows(quadrupoles, 1, "Y"),
-                firstOrderMatrixRows(quadrupoles, 2, "Y"),
-                firstOrderMatrixRows(quadrupoles, 3, "Y"),
-                firstOrderMatrixRows(quadrupoles, 4, "Y"),
-            ]
-        )
-        * -1
+    return np.array(
+        [
+            firstOrderMatrixRows(quadrupoles, 1, "X"),
+            firstOrderMatrixRows(quadrupoles, 2, "X"),
+            firstOrderMatrixRows(quadrupoles, 3, "X"),
+            firstOrderMatrixRows(quadrupoles, 4, "X"),
+            firstOrderMatrixRows(quadrupoles, 1, "Y"),
+            firstOrderMatrixRows(quadrupoles, 2, "Y"),
+            firstOrderMatrixRows(quadrupoles, 3, "Y"),
+            firstOrderMatrixRows(quadrupoles, 4, "Y"),
+        ]
     )
 
 
@@ -262,8 +259,9 @@ quadrupolesY = pd.concat([leftY, rightY])
 
 quadrupolesLEFT = pd.concat([leftX, leftY])
 
-print(quadrupolesLEFT)
-print(secondOrderGeneralVector(quadrupolesLEFT, ERRs))
+# print(quadrupolesLEFT)
+# print(secondOrderGeneralVector(quadrupolesLEFT, ERRs))
+#
 
 
 def GetConstants(quadrupoles, errors=ERRs):
@@ -316,41 +314,34 @@ def ErrorSimulation(quadrupoles, errors=ERRs):
     """Takes a vector of errors that will be simulated on the 8 quadrupoles and
     outputs the value of the 2nd order equation for error"""
 
-    firstOrderTerm = firstOrderMatrix(quadrupoles) @ errors
+    firstOrderTerm = FirstOrderMatrix(quadrupoles) @ errors
 
-    secondOrderTerm = secondOrderVector(quadrupoles, errors)
-
-    return firstOrderTerm + secondOrderTerm
+    secondOrderTerm = secondOrderGeneralVector(quadrupoles, errors)
+    return firstOrderTerm  # + secondOrderTerm
 
 
 def findLinearSolutions(quadrupoles, solution):
     """Function that, given an interaction region _reg_, performs all the code to find the first approximations to
     the solutions of the errors, that is, solves the system of linear non-cross equations"""
 
-    A = (
-        firstOrderMatrix1(quadrupoles)
-        + firstOrderMatrix2(quadrupoles)
-        + firstOrderMatrix3(quadrupoles)
-        + firstOrderMatrix4(quadrupoles)
-    )
+    A = FirstOrderMatrix(quadrupoles)
 
-    Errors = np.linalg.solve(A, solution)
-
+    Errors, t1, t2, t3 = np.linalg.lstsq(A, solution)
     return Errors
 
 
-def findSystemSolution(reg, C1, errors=ERRs, treshold=TRESHOLD):
+def findSystemSolution(reg, errors=ERRs, treshold=TRESHOLD):
     """This function runs the iterative method for finding a solution of the system"""
 
     print(f"Simulated Errors: {errors}")
 
     left = selectedQP.loc[reg - 1, "leftX"]
-    right = selectedQP.loc[reg - 1, "rightX"]
+    right = selectedQP.loc[reg - 1, "leftY"]
 
     quadrupoles = pd.concat([left, right])
 
-    rightSideConstants = C1
-
+    rightSideConstants = ErrorSimulation(quadrupoles, errors)
+    print(rightSideConstants)
     corrections = findLinearSolutions(quadrupoles, rightSideConstants)
 
     print("First order corrections: ")
@@ -359,12 +350,8 @@ def findSystemSolution(reg, C1, errors=ERRs, treshold=TRESHOLD):
 
     i = 1
     while i < 5:
-        secondOrderTerm = (
-            secondOrderVector1(quadrupoles, corrections)
-            + secondOrderVector2(quadrupoles, corrections)
-            + secondOrderVector3(quadrupoles, corrections)
-            + secondOrderVector4(quadrupoles, corrections)
-        )
+        secondOrderTerm = secondOrderGeneralVector(quadrupoles, corrections)
+
         rightSide = rightSideConstants - secondOrderTerm
 
         corrections = findLinearSolutions(quadrupoles, rightSide)
@@ -375,7 +362,7 @@ def findSystemSolution(reg, C1, errors=ERRs, treshold=TRESHOLD):
         i += 1
 
 
-# findSystemSolution(1, C1, errors=ERRs)
+findSystemSolution(1, errors=ERRs)
 # print(f"Simulated Errors: {ERRs}")
 # newerrors=findLinearSolutions(quadrupoles, C1)
 # print(newerrors)
