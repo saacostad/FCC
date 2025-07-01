@@ -17,8 +17,11 @@ from QPSelector import (
 
 # We import the dataframes from the other scripts
 physParams = QPphysParam()
+
+regs = [0, 1, 3, 5]
+
 selectedQP = selQP().iloc[
-    [0, 1, 3, 5],
+    regs,
 ]  # As the quadrupoles are repeated in the datafiles, we only select the first 4
 
 
@@ -70,33 +73,74 @@ for index, row in selectedQP.iterrows():
 """
     MATRIX CREATION
 """
-def firstOrderMatrix1(quadrupoles, f=lambda qp: (qp["BETX"], qp["MUX"])):
-    return -1*np.diag(
-        quadrupoles.apply(
-            lambda qp: f(qp)[0] * sin(f(qp)[1]) * cos(f(qp)[1]), axis=1
-        )
+
+
+def firstOrderMatrixRows(quadrupoles, term, plane="X"):
+    """Creates a row for the First Order Matrix given the quadrupoles dataframe,
+    the term number (the row for the X plane) and the plane"""
+
+    match term:
+        case 2:
+            return np.array(
+                [
+                    quadrupoles.iloc[i][f"BET{plane}"]
+                    * sin(quadrupoles.iloc[i][f"MU{plane}"]) ** 2
+                    for i in range(0, 8)
+                ]
+            )
+
+        case 3:
+            return np.array(
+                [
+                    quadrupoles.iloc[i][f"BET{plane}"]
+                    * cos(quadrupoles.iloc[i][f"MU{plane}"]) ** 2
+                    for i in range(0, 8)
+                ]
+            )
+
+        case _:
+            return np.array(
+                [
+                    quadrupoles.iloc[i][f"BET{plane}"]
+                    * sin(quadrupoles.iloc[i][f"MU{plane}"])
+                    * cos(quadrupoles.iloc[i][f"MU{plane}"])
+                    for i in range(0, 8)
+                ]
+            )
+
+
+def FirstOrderMatrix(quadrupoles):
+    """This function creates the matrix for the first order terms of the problem,
+    given the dataframe of the quadrupoles to analyse"""
+
+    return np.array(
+        [
+            firstOrderMatrixRows(quadrupoles, 1, "X"),
+            firstOrderMatrixRows(quadrupoles, 2, "X"),
+            firstOrderMatrixRows(quadrupoles, 3, "X"),
+            firstOrderMatrixRows(quadrupoles, 4, "X"),
+            firstOrderMatrixRows(quadrupoles, 1, "Y"),
+            firstOrderMatrixRows(quadrupoles, 2, "Y"),
+            firstOrderMatrixRows(quadrupoles, 3, "Y"),
+            firstOrderMatrixRows(quadrupoles, 4, "Y"),
+        ]
     )
 
-def firstOrderMatrix2(quadrupoles, f=lambda qp: (qp["BETX"], qp["MUX"])):
-    return np.diag(
-        quadrupoles.apply(
-            lambda qp: f(qp)[0] * sin(f(qp)[1]) * sin(f(qp)[1]), axis=1
-        )
-    )
 
-def firstOrderMatrix3(quadrupoles, f=lambda qp: (qp["BETX"], qp["MUX"])):
-    return np.diag(
-        quadrupoles.apply(
-            lambda qp: f(qp)[0] * cos(f(qp)[1]) * cos(f(qp)[1]), axis=1
-        )
-    )
+reg = regs[2]
+leftX = selectedQP.loc[reg, "leftX"]
+rightX = selectedQP.loc[reg, "rightX"]
+quadrupolesX = pd.concat([leftX, rightX])
 
-def firstOrderMatrix4(quadrupoles, f=lambda qp: (qp["BETX"], qp["MUX"])):
-    return -1*np.diag(
-        quadrupoles.apply(
-            lambda qp: f(qp)[0] * sin(f(qp)[1]) * cos(f(qp)[1]), axis=1
-        )
-    )
+leftY = selectedQP.loc[reg, "leftY"]
+rightY = selectedQP.loc[reg, "rightY"]
+quadrupolesY = pd.concat([leftY, rightY])
+
+quadrupolesLEFT = pd.concat([leftX, leftY])
+
+print(quadrupolesLEFT)
+print(FirstOrderMatrix(quadrupolesLEFT))
+
 
 def secondOrderVector1(qp, err=ERRs, f=lambda qp: (qp["BETX"], qp["MUX"])):
     linVector = np.array(
@@ -112,9 +156,11 @@ def secondOrderVector1(qp, err=ERRs, f=lambda qp: (qp["BETX"], qp["MUX"])):
         )
 
     nonLinearMatrix = np.tril(
-        np.fromfunction(np.vectorize(nonLinearMatrixTerms1), (8, 8), dtype=np.double), k=-1
+        np.fromfunction(np.vectorize(nonLinearMatrixTerms1), (8, 8), dtype=np.double),
+        k=-1,
     )
-    return -1*linVector * (nonLinearMatrix @ err)
+    return -1 * linVector * (nonLinearMatrix @ err)
+
 
 def secondOrderVector2(qp, err=ERRs, f=lambda qp: (qp["BETX"], qp["MUX"])):
     linVector = np.array(
@@ -130,9 +176,11 @@ def secondOrderVector2(qp, err=ERRs, f=lambda qp: (qp["BETX"], qp["MUX"])):
         )
 
     nonLinearMatrix = np.tril(
-        np.fromfunction(np.vectorize(nonLinearMatrixTerms2), (8, 8), dtype=np.double), k=-1
+        np.fromfunction(np.vectorize(nonLinearMatrixTerms2), (8, 8), dtype=np.double),
+        k=-1,
     )
     return linVector * (nonLinearMatrix @ err)
+
 
 def secondOrderVector3(qp, err=ERRs, f=lambda qp: (qp["BETX"], qp["MUX"])):
     linVector = np.array(
@@ -148,9 +196,11 @@ def secondOrderVector3(qp, err=ERRs, f=lambda qp: (qp["BETX"], qp["MUX"])):
         )
 
     nonLinearMatrix = np.tril(
-        np.fromfunction(np.vectorize(nonLinearMatrixTerms3), (8, 8), dtype=np.double), k=-1
+        np.fromfunction(np.vectorize(nonLinearMatrixTerms3), (8, 8), dtype=np.double),
+        k=-1,
     )
     return linVector * (nonLinearMatrix @ err)
+
 
 def secondOrderVector4(qp, err=ERRs, f=lambda qp: (qp["BETX"], qp["MUX"])):
     linVector = np.array(
@@ -166,57 +216,51 @@ def secondOrderVector4(qp, err=ERRs, f=lambda qp: (qp["BETX"], qp["MUX"])):
         )
 
     nonLinearMatrix = np.tril(
-        np.fromfunction(np.vectorize(nonLinearMatrixTerms4), (8, 8), dtype=np.double), k=-1
+        np.fromfunction(np.vectorize(nonLinearMatrixTerms4), (8, 8), dtype=np.double),
+        k=-1,
     )
-    return -1*linVector * (nonLinearMatrix @ err)
-
-
+    return -1 * linVector * (nonLinearMatrix @ err)
 
 
 def GetConstants(quadrupoles, errors=ERRs):
     Vectorsx = []
     Vectorsy = []
-    totalVectors =[]
+    totalVectors = []
     f_y = lambda qp: (qp["BETY"], qp["MUY"])
 
     for i in range(1, 5):
         # Obtener las funciones dinámicamente por nombre
-        firstOrderFunc = globals()[f'firstOrderMatrix{i}']
-        secondOrderFunc = globals()[f'secondOrderVector{i}']
+        firstOrderFunc = globals()[f"firstOrderMatrix{i}"]
+        secondOrderFunc = globals()[f"secondOrderVector{i}"]
 
         # Calcular contribuciones
         firstOrder = firstOrderFunc(quadrupoles) @ errors
         secondOrder = secondOrderFunc(quadrupoles, errors)
 
-
         totalVector = firstOrder + secondOrder
         Vectorsx.append(np.sum(totalVector))
     for i in range(1, 5):
         # Obtener las funciones dinámicamente por nombre
-        firstOrderFunc = globals()[f'firstOrderMatrix{i}']
-        secondOrderFunc = globals()[f'secondOrderVector{i}']
+        firstOrderFunc = globals()[f"firstOrderMatrix{i}"]
+        secondOrderFunc = globals()[f"secondOrderVector{i}"]
 
         # Calcular contribuciones
-        firstOrder = firstOrderFunc(quadrupoles,f=f_y) @ errors
-        secondOrder = secondOrderFunc(quadrupoles, errors,f=f_y)
+        firstOrder = firstOrderFunc(quadrupoles, f=f_y) @ errors
+        secondOrder = secondOrderFunc(quadrupoles, errors, f=f_y)
 
         totalVector = firstOrder + secondOrder
         Vectorsy.append(np.sum(totalVector))
 
-    totalVectors = Vectorsx +Vectorsy
+    totalVectors = Vectorsx + Vectorsy
     return totalVectors
 
 
-reg=1
-left = selectedQP.loc[reg - 1, "leftX"]
-right = selectedQP.loc[reg - 1, "rightX"]
-quadrupoles = pd.concat([left, right])
+# print(firstOrderMatrix1(quadrupolesX, "Y"))
 
-#firstOrder = firstOrderMatrix(quadrupoles) @ ERRs
-#secondOrder = secondOrderVector(quadrupoles, ERRs)
-C1=GetConstants(quadrupoles, ERRs)
-print(C1)
-
+# firstOrder = firstOrderMatrix(quadrupoles) @ ERRs
+# secondOrder = secondOrderVector(quadrupoles, ERRs)
+# C1 = GetConstants(quadrupoles, ERRs)
+# print(C1)
 
 
 """
@@ -239,14 +283,19 @@ def findLinearSolutions(quadrupoles, solution):
     """Function that, given an interaction region _reg_, performs all the code to find the first approximations to
     the solutions of the errors, that is, solves the system of linear non-cross equations"""
 
-    A = firstOrderMatrix1(quadrupoles) +firstOrderMatrix2(quadrupoles)+firstOrderMatrix3(quadrupoles)+firstOrderMatrix4(quadrupoles)
+    A = (
+        firstOrderMatrix1(quadrupoles)
+        + firstOrderMatrix2(quadrupoles)
+        + firstOrderMatrix3(quadrupoles)
+        + firstOrderMatrix4(quadrupoles)
+    )
 
     Errors = np.linalg.solve(A, solution)
 
     return Errors
 
 
-def findSystemSolution(reg,C1, errors=ERRs, treshold=TRESHOLD):
+def findSystemSolution(reg, C1, errors=ERRs, treshold=TRESHOLD):
     """This function runs the iterative method for finding a solution of the system"""
 
     print(f"Simulated Errors: {errors}")
@@ -265,8 +314,13 @@ def findSystemSolution(reg,C1, errors=ERRs, treshold=TRESHOLD):
     # secondOrderConstantTerm = secondOrderVector(quadrupoles, errors)
 
     i = 1
-    while True:
-        secondOrderTerm = secondOrderVector1(quadrupoles, corrections)+secondOrderVector2(quadrupoles, corrections)+secondOrderVector3(quadrupoles, corrections)+secondOrderVector4(quadrupoles, corrections)
+    while i < 5:
+        secondOrderTerm = (
+            secondOrderVector1(quadrupoles, corrections)
+            + secondOrderVector2(quadrupoles, corrections)
+            + secondOrderVector3(quadrupoles, corrections)
+            + secondOrderVector4(quadrupoles, corrections)
+        )
         rightSide = rightSideConstants - secondOrderTerm
 
         corrections = findLinearSolutions(quadrupoles, rightSide)
@@ -277,7 +331,7 @@ def findSystemSolution(reg,C1, errors=ERRs, treshold=TRESHOLD):
         i += 1
 
 
-findSystemSolution(1,C1, errors=ERRs)
-#print(f"Simulated Errors: {ERRs}")
-#newerrors=findLinearSolutions(quadrupoles, C1)
-#print(newerrors)
+# findSystemSolution(1, C1, errors=ERRs)
+# print(f"Simulated Errors: {ERRs}")
+# newerrors=findLinearSolutions(quadrupoles, C1)
+# print(newerrors)
