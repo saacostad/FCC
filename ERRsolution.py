@@ -38,9 +38,11 @@ TRESHOLD = 0.8e-5
 # This is the error we're gonna try to recreate
 ERRs = np.array(list(range(1, 9))) * 10 ** (-7)
 
+
 """
-    FUNCTION DEFINITIONS
-In this part, we define different functions to make the script more readable
+    DATA MODIFICATION
+In this part, we modify the original quadrupoles dataframes SO they contain the new column KL, which will be used
+in order to calculate the magnetic errors of the quadrupoles
 """
 
 
@@ -57,12 +59,6 @@ def createRowKL(df):
         ] * 10 ** (-4)
 
 
-"""
-    DATA MODIFICATION
-In this part, we modify the original quadrupoles dataframes SO they contain the new column KL, which will be used
-in order to calculate the magnetic errors of the quadrupoles
-"""
-
 for index, row in selectedQP.iterrows():
     createRowKL(selectedQP.loc[index, "leftX"])
     createRowKL(selectedQP.loc[index, "leftY"])
@@ -72,7 +68,15 @@ for index, row in selectedQP.iterrows():
 
 """
     MATRIX CREATION
+In this section, all the functions defining the matrices and vectors are created.
+The First Order Matrix M is the one that satisfies M b = e, that is, the one we use 
+to solve the linear system of equations. The Second Oreder Vector is the vector that 
+has the information of all the Non-linear (up to the second term) terms of the equation.
 """
+
+
+#   FIRST ORDER EQUATIONS LOGIC
+# -----------------------------------------------------------------------------------------
 
 
 def firstOrderMatrixRows(quadrupoles, term, plane="X"):
@@ -113,33 +117,25 @@ def FirstOrderMatrix(quadrupoles):
     """This function creates the matrix for the first order terms of the problem,
     given the dataframe of the quadrupoles to analyse"""
 
-    return np.array(
-        [
-            firstOrderMatrixRows(quadrupoles, 1, "X"),
-            firstOrderMatrixRows(quadrupoles, 2, "X"),
-            firstOrderMatrixRows(quadrupoles, 3, "X"),
-            firstOrderMatrixRows(quadrupoles, 4, "X"),
-            firstOrderMatrixRows(quadrupoles, 1, "Y"),
-            firstOrderMatrixRows(quadrupoles, 2, "Y"),
-            firstOrderMatrixRows(quadrupoles, 3, "Y"),
-            firstOrderMatrixRows(quadrupoles, 4, "Y"),
-        ]
+    return (
+        np.array(
+            [
+                firstOrderMatrixRows(quadrupoles, 1, "X"),
+                firstOrderMatrixRows(quadrupoles, 2, "X"),
+                firstOrderMatrixRows(quadrupoles, 3, "X"),
+                firstOrderMatrixRows(quadrupoles, 4, "X"),
+                firstOrderMatrixRows(quadrupoles, 1, "Y"),
+                firstOrderMatrixRows(quadrupoles, 2, "Y"),
+                firstOrderMatrixRows(quadrupoles, 3, "Y"),
+                firstOrderMatrixRows(quadrupoles, 4, "Y"),
+            ]
+        )
+        * -1
     )
 
 
-reg = regs[2]
-leftX = selectedQP.loc[reg, "leftX"]
-rightX = selectedQP.loc[reg, "rightX"]
-quadrupolesX = pd.concat([leftX, rightX])
-
-leftY = selectedQP.loc[reg, "leftY"]
-rightY = selectedQP.loc[reg, "rightY"]
-quadrupolesY = pd.concat([leftY, rightY])
-
-quadrupolesLEFT = pd.concat([leftX, leftY])
-
-print(quadrupolesLEFT)
-print(FirstOrderMatrix(quadrupolesLEFT))
+#   SECOND ORDER EQUATION LOGIC
+# --------------------------------------------------------------------------------------
 
 
 def secondOrderVector1(qp, err=ERRs, f=lambda qp: (qp["BETX"], qp["MUX"])):
@@ -220,6 +216,54 @@ def secondOrderVector4(qp, err=ERRs, f=lambda qp: (qp["BETX"], qp["MUX"])):
         k=-1,
     )
     return -1 * linVector * (nonLinearMatrix @ err)
+
+
+def secondOrderGeneralVector(quadrupoles, err=ERRs):
+    """This function creates the vector for the second order terms"""
+
+    return np.array(
+        [
+            np.sum(secondOrderVector1(quadrupoles, err)),
+            np.sum(secondOrderVector2(quadrupoles, err)),
+            np.sum(secondOrderVector3(quadrupoles, err)),
+            np.sum(secondOrderVector4(quadrupoles, err)),
+            np.sum(
+                secondOrderVector1(
+                    quadrupoles, err, f=lambda qp: (qp["BETY"], qp["MUY"])
+                )
+            ),
+            np.sum(
+                secondOrderVector2(
+                    quadrupoles, err, f=lambda qp: (qp["BETY"], qp["MUY"])
+                )
+            ),
+            np.sum(
+                secondOrderVector3(
+                    quadrupoles, err, f=lambda qp: (qp["BETY"], qp["MUY"])
+                )
+            ),
+            np.sum(
+                secondOrderVector4(
+                    quadrupoles, err, f=lambda qp: (qp["BETY"], qp["MUY"])
+                )
+            ),
+        ]
+    )
+
+
+reg = regs[2]
+leftX = selectedQP.loc[reg, "leftX"]
+rightX = selectedQP.loc[reg, "rightX"]
+quadrupolesX = pd.concat([leftX, rightX])
+
+leftY = selectedQP.loc[reg, "leftY"]
+rightY = selectedQP.loc[reg, "rightY"]
+quadrupolesY = pd.concat([leftY, rightY])
+
+quadrupolesLEFT = pd.concat([leftX, leftY])
+
+print(quadrupolesLEFT)
+print(secondOrderGeneralVector(quadrupolesLEFT, ERRs))
 
 
 def GetConstants(quadrupoles, errors=ERRs):
