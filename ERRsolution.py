@@ -36,7 +36,7 @@ TRESHOLD = 0.8e-5
 
 
 # This is the error we're gonna try to recreate
-ERRs = np.array(list(range(1, 9))) * 10 ** (-2)
+ERRs = np.array(list(range(1, 9))) * 10 ** (-5)
 
 
 """
@@ -87,7 +87,7 @@ def firstOrderMatrixRows(quadrupoles, term, plane):
         case 2:
             return np.array(
                 [
-                    -quadrupoles.iloc[i][f"BET{plane}"]
+                    quadrupoles.iloc[i][f"BET{plane}"]
                     * sin(quadrupoles.iloc[i][f"MU{plane}"]) ** 2
                     for i in range(0, 8)
                 ]
@@ -96,16 +96,25 @@ def firstOrderMatrixRows(quadrupoles, term, plane):
         case 3:
             return np.array(
                 [
-                    -quadrupoles.iloc[i][f"BET{plane}"]
+                    quadrupoles.iloc[i][f"BET{plane}"]
                     * cos(quadrupoles.iloc[i][f"MU{plane}"]) ** 2
                     for i in range(0, 8)
                 ]
             )
 
-        case _:
+        case 1:
             return np.array(
                 [
-                    quadrupoles.iloc[i][f"BET{plane}"]
+                    -quadrupoles.iloc[i][f"BET{plane}"]
+                    * sin(quadrupoles.iloc[i][f"MU{plane}"])
+                    * cos(quadrupoles.iloc[i][f"MU{plane}"])
+                    for i in range(0, 8)
+                ]
+            )
+        case 4:
+            return np.array(
+                [
+                    -quadrupoles.iloc[i][f"BET{plane}"]
                     * sin(quadrupoles.iloc[i][f"MU{plane}"])
                     * cos(quadrupoles.iloc[i][f"MU{plane}"])
                     for i in range(0, 8)
@@ -317,7 +326,7 @@ def ErrorSimulation(quadrupoles, errors=ERRs):
     firstOrderTerm = FirstOrderMatrix(quadrupoles) @ errors
 
     secondOrderTerm = secondOrderGeneralVector(quadrupoles, errors)
-    return firstOrderTerm  # + secondOrderTerm
+    return firstOrderTerm - secondOrderTerm
 
 
 def findLinearSolutions(quadrupoles, solution):
@@ -338,21 +347,28 @@ def findSystemSolution(reg, errors=ERRs, treshold=TRESHOLD):
     left = selectedQP.loc[reg - 1, "leftX"]
     right = selectedQP.loc[reg - 1, "leftY"]
 
+    left["BETX"] = left["BETX"] / 10000
+    left["BETY"] = left["BETY"] / 10000
+    right["BETX"] = right["BETX"] / 10000
+    right["BETY"] = right["BETY"] / 10000
+
     quadrupoles = pd.concat([left, right])
 
     rightSideConstants = ErrorSimulation(quadrupoles, errors)
-    print(rightSideConstants)
     corrections = findLinearSolutions(quadrupoles, rightSideConstants)
 
     print("First order corrections: ")
     print(corrections)
     # secondOrderConstantTerm = secondOrderVector(quadrupoles, errors)
 
+    test = FirstOrderMatrix(quadrupoles) @ corrections - rightSideConstants
+    print(f"test: {test}")
+
     i = 1
-    while i < 5:
+    while i < 8:
         secondOrderTerm = secondOrderGeneralVector(quadrupoles, corrections)
 
-        rightSide = rightSideConstants - secondOrderTerm
+        rightSide = rightSideConstants + secondOrderTerm
 
         corrections = findLinearSolutions(quadrupoles, rightSide)
 
@@ -360,6 +376,9 @@ def findSystemSolution(reg, errors=ERRs, treshold=TRESHOLD):
         print(corrections)
 
         i += 1
+
+    test = FirstOrderMatrix(quadrupoles) @ corrections - rightSideConstants
+    print(f"second test: {test}")
 
 
 findSystemSolution(1, errors=ERRs)
