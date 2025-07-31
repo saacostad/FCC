@@ -7,6 +7,7 @@ from math import cos, sin
 
 import numpy as np
 import pandas as pd
+from scipy.optimize import least_squares
 
 from QPphysicalParam import (
     getQP as QPphysParam,
@@ -322,11 +323,9 @@ def GetConstants(quadrupoles, errors=ERRs):
 def ErrorSimulation(quadrupoles, errors=ERRs):
     """Takes a vector of errors that will be simulated on the 8 quadrupoles and
     outputs the value of the 2nd order equation for error"""
-
     firstOrderTerm = FirstOrderMatrix(quadrupoles) @ errors
-
     secondOrderTerm = secondOrderGeneralVector(quadrupoles, errors)
-    return firstOrderTerm - secondOrderTerm
+    return firstOrderTerm + secondOrderTerm
 
 
 def findLinearSolutions(quadrupoles, solution):
@@ -339,48 +338,112 @@ def findLinearSolutions(quadrupoles, solution):
     return Errors
 
 
+def residuals(params, quadrupoles, goal):
+    return (
+        FirstOrderMatrix(quadrupoles) @ params
+        + secondOrderGeneralVector(quadrupoles, params)
+        - goal
+    )
+
+
+def chi2(e1, e2, e3, e4, e5, e6, e7, e8, goal, quadrupoles):
+    params = [e1, e2, e3, e4, e5, e6, e7, e8]
+    return np.sum((goal - (ErrorSimulation(quadrupoles, params))) ** 2)
+
+
 def findSystemSolution(reg, errors=ERRs, treshold=TRESHOLD):
     """This function runs the iterative method for finding a solution of the system"""
 
-    print(f"Simulated Errors: {errors}")
+    print(f"Interaction region NO: {reg}")
+    print(f"Goal errors: {errors}")
 
     left = selectedQP.loc[reg - 1, "leftX"]
     right = selectedQP.loc[reg - 1, "leftY"]
 
-    left["BETX"] = left["BETX"] / 10000
-    left["BETY"] = left["BETY"] / 10000
-    right["BETX"] = right["BETX"] / 10000
-    right["BETY"] = right["BETY"] / 10000
+    left["BETX"] = left["BETX"]
+    left["BETY"] = left["BETY"]
+    right["BETX"] = right["BETX"]
+    right["BETY"] = right["BETY"]
 
     quadrupoles = pd.concat([left, right])
 
     rightSideConstants = ErrorSimulation(quadrupoles, errors)
-    corrections = findLinearSolutions(quadrupoles, rightSideConstants)
 
-    print("First order corrections: ")
-    print(corrections)
+    # corrections = findLinearSolutions(quadrupoles, rightSideConstants)
+    #
+    # print("First order corrections: ")
+    # print(corrections)
     # secondOrderConstantTerm = secondOrderVector(quadrupoles, errors)
 
-    test = FirstOrderMatrix(quadrupoles) @ corrections - rightSideConstants
-    print(f"test: {test}")
+    # test = FirstOrderMatrix(quadrupoles) @ corrections - rightSideConstants
+    # print(f": {test}")
 
-    i = 1
-    while i < 8:
-        secondOrderTerm = secondOrderGeneralVector(quadrupoles, corrections)
+    # i = 1
+    # while i < 8:
+    #     secondOrderTerm = secondOrderGeneralVector(quadrupoles, corrections)
+    #
+    #     rightSide = rightSideConstants + secondOrderTerm
+    #
+    #     corrections = findLinearSolutions(quadrupoles, rightSide)
+    #
+    #     print(f"Iteration {i}")
+    #     print(corrections)
+    #
+    #     i += 1
+    #
+    # test = FirstOrderMatrix(quadrupoles) @ corrections - rightSideConstants
+    # print(f"second test: {test}")
 
-        rightSide = rightSideConstants + secondOrderTerm
+    initial_guess = np.array([0.0] * 8)
+    print(f"Goal constants: {rightSideConstants}")
+    print("===============================================")
+    errorsList = list()
 
-        corrections = findLinearSolutions(quadrupoles, rightSide)
+    for noise in [np.random.normal(loc=0.0, scale=1.0e-3, size=8) for i in range(5)]:
+        goal = rightSideConstants + noise
+        print(f"Noise added: {noise}")
 
-        print(f"Iteration {i}")
-        print(corrections)
+        min = 1000
+        minErrArr = None
+        for initial_guess in [
+            np.random.normal(loc=0.0, scale=1.0e-5, size=8) for i in range(5)
+        ]:
+            res = least_squares(
+                residuals,
+                initial_guess,
+                args=(quadrupoles, goal),
+                # bounds=(np.full(8, -9e-4), np.full(8, 9e-4)),
+                # x_scale="jac",
+                gtol=1e-10,
+            )
 
-        i += 1
+            if np.sum(np.abs(ErrorSimulation(quadrupoles, res.x) - goal)) < min:
+                min = np.sum(np.abs(ErrorSimulation(quadrupoles, res.x) - goal))
+                minErrArr = res.x
 
-    test = FirstOrderMatrix(quadrupoles) @ corrections - rightSideConstants
-    print(f"second test: {test}")
+        print(
+            f"Total sum. of errors respect to addded noise : {np.sum(np.abs(ErrorSimulation(quadrupoles, minErrArr) - goal))}"
+        )
+
+        print(f"Found errors: {minErrArr}")
+        # print(f"test: {ErrorSimulation(quadrupoles, res.x) - rightSideConstants}")
+        print(
+            f"Total sum. of test: {np.sum(np.abs(ErrorSimulation(quadrupoles, minErrArr) - rightSideConstants))}"
+        )
+        # print(f"Time taken for scipy: {end - start:.4f} seconds")
+        print("===============================================")
+
+        errorsList.append(minErrArr)
+
+    print("\n\n")
+    print(f"Goal errors: {errors}")
+    print(f"Average error found: {np.mean(errorsList, axis=0)}")
+    print(
+        f"General loss of average: {np.sum(np.abs(rightSideConstants - ErrorSimulation(quadrupoles, np.mean(errorsList, axis=0))))}"
+    )
 
 
+ERRs = np.random.normal(loc=0.0, scale=1.0e-4, size=8)
 findSystemSolution(1, errors=ERRs)
 # print(f"Simulated Errors: {ERRs}")
 # newerrors=findLinearSolutions(quadrupoles, C1)
