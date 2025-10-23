@@ -2,22 +2,30 @@
 This script takes the best quadrupoles on each one of the interaction regions and performs
 the error corrections accoring to the calculated theory (or something like that)
 """
+import warnings
+from numba.core.errors import NumbaExperimentalFeatureWarning
+
+warnings.filterwarnings("ignore", category=NumbaExperimentalFeatureWarning)
 
 from math import cos, sin
-
+from numba import njit, prange
 import numpy as np
 import pandas as pd
-from scipy.optimize import least_squares
+from scipy.optimize import root
+from tfs import constants
+
 
 from QPphysicalParam import (
-    getQP as QPphysParam,
+    getQP as QPphysicalParam,
 )  # From here, we get a pandas DataFrame with the physical parameters of the quadrupoles
 from QPSelector import (
     MainFunction as selQP,
-)  # From here, we get the best quadrupoles for each one of the Interaction Regions
+)  # From here, we et the best quadrupoles for each one of the Interaction Regions
 
-# We import the dataframes from the other scripts
-physParams = QPphysParam()
+
+
+# We import the datframes from the other scripts
+physParams = QPphysicalParam()
 
 regs = [0, 1, 3, 5]
 
@@ -75,187 +83,94 @@ to solve the linear system of equations. The Second Oreder Vector is the vector 
 has the information of all the Non-linear (up to the second term) terms of the equation.
 """
 
+""" APPROACH USING SIMPLER EQUATIONS WITH EVERYTHING INCLUDED """
 
-#   FIRST ORDER EQUATIONS LOGIC
-# -----------------------------------------------------------------------------------------
-
-
-def firstOrderMatrixRows(quadrupoles, term, plane):
-    """Creates a row for the First Order Matrix given the quadrupoles dataframe,
-    the term number (the row for the X plane) and the plane"""
-
-    match term:
-        case 2:
-            return np.array(
-                [
-                    quadrupoles.iloc[i][f"BET{plane}"]
-                    * sin(quadrupoles.iloc[i][f"MU{plane}"]) ** 2
-                    for i in range(0, 6)
-                ]
-            )
-
-        case 3:
-            return np.array(
-                [
-                    quadrupoles.iloc[i][f"BET{plane}"]
-                    * cos(quadrupoles.iloc[i][f"MU{plane}"]) ** 2
-                    for i in range(0, 6)
-                ]
-            )
-
-        case 1:
-            return np.array(
-                [
-                    -quadrupoles.iloc[i][f"BET{plane}"]
-                    * sin(quadrupoles.iloc[i][f"MU{plane}"])
-                    * cos(quadrupoles.iloc[i][f"MU{plane}"])
-                    for i in range(0, 6)
-                ]
-            )
-        case 4:
-            return np.array(
-                [
-                    -quadrupoles.iloc[i][f"BET{plane}"]
-                    * sin(quadrupoles.iloc[i][f"MU{plane}"])
-                    * cos(quadrupoles.iloc[i][f"MU{plane}"])
-                    for i in range(0, 6)
-                ]
-            )
+N = 6
 
 
-def FirstOrderMatrix(quadrupoles):
-    """This function creates the matrix for the first order terms of the problem,
-    given the dataframe of the quadrupoles to analyse"""
+def getBet(qps, plane):
+    return np.array(qps[f"BET{plane}"])
 
-    return np.array(
-        [
-            firstOrderMatrixRows(quadrupoles, 1, "X"),
-            firstOrderMatrixRows(quadrupoles, 2, "X"),
-            firstOrderMatrixRows(quadrupoles, 3, "X"),
-            #           firstOrderMatrixRows(quadrupoles, 4, "X"),
-            firstOrderMatrixRows(quadrupoles, 1, "Y"),
-            firstOrderMatrixRows(quadrupoles, 2, "Y"),
-            firstOrderMatrixRows(quadrupoles, 3, "Y"),
-            #           firstOrderMatrixRows(quadrupoles, 4, "Y"),
-        ]
-    )
+def getMu(qps, plane):
+    return np.array(qps[f"MU{plane}"])
 
 
-#   SECOND ORDER EQUATION LOGIC
-# --------------------------------------------------------------------------------------
+@njit   
+def equation(errs, betas, mus, eqNo = 1):
+
+    sum = 0.0
+
+    match eqNo:
+        case 1: 
+            sectrig = lambda x,y: np.sin(x) * np.cos(y)
+        case 2: 
+            sectrig = lambda x,y: np.sin(x) * np.sin(y)
+        case 3: 
+            sectrig = lambda x,y: np.cos(x) * np.cos(y)
+        case 4: 
+            sectrig = lambda x,y: np.cos(x) * np.sin(y)
 
 
-def secondOrderVector1(qp, err=ERRs, f=lambda qp: (qp["BETX"], qp["MUX"])):
-    linVector = np.array(
-        [0] + [f(qp.iloc[i])[0] * cos(f(qp.iloc[i])[1]) * err[i] for i in range(1, 6)]
-    )
-
-    def nonLinearMatrixTerms1(vi, vj):
-        i, j = int(vj), int(vi)
-        return (
-            f(qp.iloc[i])[0]
-            * sin(f(qp.iloc[i])[1])
-            * sin(f(qp.iloc[j])[1] - f(qp.iloc[i])[1])
-        )
-
-    nonLinearMatrix = np.tril(
-        np.fromfunction(np.vectorize(nonLinearMatrixTerms1), (6, 6), dtype=np.double),
-        k=-1,
-    )
-    return -1 * linVector * (nonLinearMatrix @ err)
+    for i in range(N):
+        sum += errs[i] * betas[i] * sectrig(mus[i], mus[i])
 
 
-def secondOrderVector2(qp, err=ERRs, f=lambda qp: (qp["BETX"], qp["MUX"])):
-    linVector = np.array(
-        [0] + [f(qp.iloc[i])[0] * sin(f(qp.iloc[i])[1]) * err[i] for i in range(1, 6)]
-    )
+    for i in range(1, N):
+        for j in range(0, i-1):
 
-    def nonLinearMatrixTerms2(vi, vj):
-        i, j = int(vj), int(vi)
-        return (
-            f(qp.iloc[i])[0]
-            * sin(f(qp.iloc[i])[1])
-            * sin(f(qp.iloc[j])[1] - f(qp.iloc[i])[1])
-        )
+            sot = sectrig(mus[j], mus[i])
+            
+            for k in range(j, i+1):
+                sot *= errs[k] * betas[k]
 
-    nonLinearMatrix = np.tril(
-        np.fromfunction(np.vectorize(nonLinearMatrixTerms2), (6, 6), dtype=np.double),
-        k=-1,
-    )
-    return linVector * (nonLinearMatrix @ err)
+            for m in range(j, i):
+                sot *= np.sin(mus[m + 1] - mus[m])
+
+            sum += sot
+
+    return sum * (-1)**(eqNo not in [2, 3])
 
 
-def secondOrderVector3(qp, err=ERRs, f=lambda qp: (qp["BETX"], qp["MUX"])):
-    linVector = np.array(
-        [0] + [f(qp.iloc[i])[0] * cos(f(qp.iloc[i])[1]) * err[i] for i in range(1, 6)]
-    )
 
-    def nonLinearMatrixTerms3(vi, vj):
-        i, j = int(vj), int(vi)
-        return (
-            f(qp.iloc[i])[0]
-            * cos(f(qp.iloc[i])[1])
-            * sin(f(qp.iloc[j])[1] - f(qp.iloc[i])[1])
-        )
+@njit   
+def equationGrad(errs, xj, betas, mus, eqNo = 1):
 
-    nonLinearMatrix = np.tril(
-        np.fromfunction(np.vectorize(nonLinearMatrixTerms3), (6, 6), dtype=np.double),
-        k=-1,
-    )
-    return linVector * (nonLinearMatrix @ err)
+    match eqNo:
+        case 1: 
+            sectrig = lambda x,y: np.sin(x) * np.cos(y)
+        case 2: 
+            sectrig = lambda x,y: np.sin(x) * np.sin(y)
+        case 3: 
+            sectrig = lambda x,y: np.cos(x) * np.cos(y)
+        case 4: 
+            sectrig = lambda x,y: np.cos(x) * np.sin(y)
 
 
-def secondOrderVector4(qp, err=ERRs, f=lambda qp: (qp["BETX"], qp["MUX"])):
-    linVector = np.array(
-        [0] + [f(qp.iloc[i])[0] * sin(f(qp.iloc[i])[1]) * err[i] for i in range(1, 6)]
-    )
-
-    def nonLinearMatrixTerms4(vi, vj):
-        i, j = int(vj), int(vi)
-        return (
-            f(qp.iloc[i])[0]
-            * cos(f(qp.iloc[i])[1])
-            * sin(f(qp.iloc[j])[1] - f(qp.iloc[i])[1])
-        )
-
-    nonLinearMatrix = np.tril(
-        np.fromfunction(np.vectorize(nonLinearMatrixTerms4), (6, 6), dtype=np.double),
-        k=-1,
-    )
-    return -1 * linVector * (nonLinearMatrix @ err)
+    sum = betas[xj] * sectrig(mus[xj], mus[xj])
 
 
-def secondOrderGeneralVector(quadrupoles, err=ERRs):
-    """This function creates the vector for the second order terms"""
+    for i in range(1, N):
+        for j in range(0, i-1):
 
-    return np.array(
-        [
-            np.sum(secondOrderVector1(quadrupoles, err)),
-            np.sum(secondOrderVector2(quadrupoles, err)),
-            np.sum(secondOrderVector3(quadrupoles, err)),
-            # np.sum(secondOrderVector4(quadrupoles, err)),
-            np.sum(
-                secondOrderVector1(
-                    quadrupoles, err, f=lambda qp: (qp["BETY"], qp["MUY"])
-                )
-            ),
-            np.sum(
-                secondOrderVector2(
-                    quadrupoles, err, f=lambda qp: (qp["BETY"], qp["MUY"])
-                )
-            ),
-            np.sum(
-                secondOrderVector3(
-                    quadrupoles, err, f=lambda qp: (qp["BETY"], qp["MUY"])
-                )
-            ),
-            # np.sum(
-            #     secondOrderVector4(
-            #         quadrupoles, err, f=lambda qp: (qp["BETY"], qp["MUY"])
-            #     )
-            # ),
-        ]
-    )
+            if xj not in range(j, i+1):
+                continue
+
+            sot = sectrig(mus[j], mus[i])
+            
+            for k in range(j, i+1):
+                sot *= errs[k] * betas[k]
+
+            for m in range(j, i):
+                sot *= np.sin(mus[m + 1] - mus[m])
+        
+            sum += sot / errs[xj]
+
+
+    return sum * (-1)**(eqNo not in [2, 3])
+
+
+
+
 
 
 """
@@ -266,24 +181,54 @@ def secondOrderGeneralVector(quadrupoles, err=ERRs):
 def ErrorSimulation(quadrupoles, errors):
     """Takes a vector of errors that will be simulated on the 8 quadrupoles and
     outputs the value of the 2nd order equation for error"""
-    firstOrderTerm = FirstOrderMatrix(quadrupoles) @ errors
-    secondOrderTerm = secondOrderGeneralVector(quadrupoles, errors)
-    return firstOrderTerm + secondOrderTerm
+    
+    return np.array([ equation(errors, getBet(quadrupoles, "X"), getMu(quadrupoles, "X"), eqNo = i+1) for i in range(int(N / 2)) ] + 
+                    [ equation(errors, getBet(quadrupoles, "Y"), getMu(quadrupoles, "Y"), eqNo = i+1) for i in range(int(N / 2)) ])
+
+
+
+def noiseWeights(noise, lambdas, weights = np.full(N, 0.1)):
+    return 2 * weights * noise + lambdas
+
+
+def functionConstrain(errors, quadrupoles, noise, RSC):
+    return ErrorSimulation(quadrupoles, errors) + noise - RSC
+
+
+def gradientConstrain(lambs, errors, quadrupoles):
+    
+    betasY = getBet(quadrupoles, "Y")
+    musY = getBet(quadrupoles, "Y")
+    betasX = getBet(quadrupoles, "X")
+    musX = getBet(quadrupoles, "X")
+
+    def getGradient(xj):
+        return np.array([equationGrad(errors, xj, betasX, musX, i) for i in range(1, int(N / 2 + 1))] + 
+                        [equationGrad(errors, xj, betasY, musY, i) for i in range(1, int(N / 2 + 1))] )
+
+    return np.array( [np.dot(lambs, getGradient(j)) for j in range(N)] )
 
 
 def residuals(params, quadrupoles, goal):
-    return (
-        FirstOrderMatrix(quadrupoles) @ params
-        # + secondOrderGeneralVector(quadrupoles, params)
-        - goal
-    ) / (0.01 * goal)
+
+    errs = params[0:N]
+    nois = params[N:2*N]
+    lambs = params[2*N:]
+
+    eqs = []
+
+    eqs.extend(functionConstrain(errs, quadrupoles, nois, goal))
+    eqs.extend(gradientConstrain(lambs, errs, quadrupoles))
+    eqs.extend(noiseWeights(nois, lambs))
+
+    return np.array(eqs)
 
 
 def findSystemSolution(reg, errors=ERRs, treshold=TRESHOLD):
     """This function runs the iterative method for finding a solution of the system"""
-
-    print(f"Interaction region NO: {reg}")
-    print(f"Goal errors: {errors}")
+    #
+    # print(f"Interaction region NO: {reg}")
+    # print(f"Goal errors: {errors}")
 
     left = selectedQP.loc[reg - 1, "leftX"]
     right = selectedQP.loc[reg - 1, "leftY"]
@@ -294,59 +239,45 @@ def findSystemSolution(reg, errors=ERRs, treshold=TRESHOLD):
     right["BETY"] = right["BETY"]
 
     quadrupoles = pd.concat([left, right])
+    
+    errors = np.random.normal(loc = 0.0, scale = 1e-4, size =N)
+    noise = np.random.normal(loc=0.0, scale=1.0e-2, size=N)     # Noise added to our signal to simulate BPMs' noise
+    rightSideConstants = ErrorSimulation(quadrupoles, errors)   # The systems expected right-side constants without noise
+    noisy_constants = rightSideConstants + noise                           # The goal right side of the equation
 
-    rightSideConstants = ErrorSimulation(quadrupoles, errors)
+    print("Added noise: \n", 100 * noise / noisy_constants)
 
-    initial_guess = np.array([0.0] * 6)
-    print(f"Goal constants: {rightSideConstants}")
-    print("===============================================")
-    errorsList = list()
-    alt_goal = 0.0
-    for noise in [np.random.normal(loc=0.0, scale=1.0e-3, size=6) for i in range(5)]:
-        goal = rightSideConstants + noise
-        noiseper = noise / rightSideConstants * 100
-        print(f"Noise added: {noiseper}   -   {np.mean(np.abs(noiseper))}")
+    for x0 in [np.random.normal(loc=0.0, scale=1.0e-5, size=3*N) for i in range(100000)]:
+    
+        # print(f"Noise added: {np.mean(np.abs(noise / goal * 100))}")
 
-        min = 1000
-        minErrArr = None
-        for initial_guess in [
-            np.random.normal(loc=0.0, scale=1.0e-5, size=6) for i in range(1)
-        ]:
-            res = least_squares(
-                residuals,
-                initial_guess,
-                args=(quadrupoles, goal),
-                gtol=1e-10,
-                loss="soft_l1",  # Robust to outliers
-                f_scale=0.01,  # Scale of noise (adjust empirically)
-            )
+        # x0 = np.random.normal(loc = 0.0, scale = 1e-3, size = 3*N)
+        sol = root(residuals, x0, args=(quadrupoles, noisy_constants), method="hybr", tol=1e-15)
+        
+        if np.all(np.array(sol.x[0:N]) - errors < 1e-5):
+            print("\n \n ============================= \n ============================ \n\n")
+            print("Converges? ", sol.success)
+            print()
 
-            if np.sum(np.abs(ErrorSimulation(quadrupoles, res.x) - goal)) < min:
-                min = np.sum(np.abs(ErrorSimulation(quadrupoles, res.x) - goal))
-                minErrArr = res.x
-                alt_goal = goal
+            print("Solution Vector: \n", sol.x[0:N])
+            print("Simulated errors: \n", errors)
 
-        print(
-            f"Total sum. of errors respect to addded noise : {np.sum(np.abs(ErrorSimulation(quadrupoles, minErrArr) - alt_goal))}"
-        )
+            print()
 
-        print(f"Found errors: {minErrArr}")
-        # print(f"test: {ErrorSimulation(quadrupoles, res.x) - rightSideConstants}")
-        print(
-            f"Total sum. of test: {np.sum(np.abs(ErrorSimulation(quadrupoles, minErrArr) - rightSideConstants))}"
-        )
-        # print(f"Time taken for scipy: {end - start:.4f} seconds")
-        print("===============================================")
+            print("Found noise: \n", sol.x[N:2*N])
+            print("Simulated noise: \n", noise)
 
-        errorsList.append(minErrArr)
+            print()
 
-    print("\n\n")
-    print(f"Goal errors: {errors}")
-    print(f"Average error found: {np.mean(errorsList, axis=0)}")
-    print(
-        f"General loss of average: {np.sum(np.abs(rightSideConstants - ErrorSimulation(quadrupoles, np.mean(errorsList, axis=0))))}"
-    )
+            print("Lambdas: \n", sol.x[2*N:])
+        
+            print()
+
+            print("Convergence in errors: \n", noisy_constants - ErrorSimulation(quadrupoles, sol.x[0:N]) - sol.x[N:2*N])
+            
+            
 
 
+#
 ERRs = np.random.normal(loc=0.0, scale=1.0e-4, size=6)
 findSystemSolution(1, errors=ERRs)

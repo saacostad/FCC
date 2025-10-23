@@ -23,10 +23,10 @@ PARAMETERS = ["NAME", "KEYWORD", "S", "MUX", "MUY", "BETX", "BETY"]
 KEYWORDS = ["MARKER", "QUADRUPOLE"]
 
 # Number of quadrupoles next to each interaction region to check.
-NEAR_IP_QP_WINDOW = 20
+NEAR_IP_QP_WINDOW = 30
 
 # How many quadrupoles to select on each side of IPs (has to be an even number)
-SELECTED_QP = 8
+SELECTED_QP = 6
 
 
 """

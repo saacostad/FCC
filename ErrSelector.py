@@ -33,7 +33,7 @@ TRESHOLD = 0.8e-5
 
 
 # This is the error we're gonna try to recreate
-ERRs = np.array(list(range(1, 9))) * 10 ** (-7)
+ERRs = np.array(list(range(1, 7))) * 10 ** (-7)
 
 """
     FUNCTION DEFINITIONS
@@ -95,7 +95,7 @@ def secondOrderVector(qp, err=ERRs):
     # For this first part, we'll create a vector array where it's first element is 0, and all the other elements are \cos(\psi_i) \beta_i B_ilinVector
     linVector = np.array(
         [0]
-        + [qp.iloc[i]["BETX"] * cos(qp.iloc[i]["MUX"]) * err[i] for i in range(1, 8)]
+        + [qp.iloc[i]["BETX"] * cos(qp.iloc[i]["MUX"]) * err[i] for i in range(1, 6)]
     )
 
     # To create the next term, which takes into account the no linear terms, we have to create a strict lower triangular matrix whose i, j elements are
@@ -115,7 +115,7 @@ def secondOrderVector(qp, err=ERRs):
 
     # We create the corresponding matrix given the element-wise rule
     nonLinearMatrix = np.fromfunction(
-        np.vectorize(nonLinearMatrixTerms), (8, 8), dtype=np.double
+        np.vectorize(nonLinearMatrixTerms), (6, 6), dtype=np.double
     )
 
     # We're only interested in the strictly lower half of the matrix
