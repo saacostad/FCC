@@ -1,5 +1,5 @@
 import numpy as np 
-
+from MatricialFunction import CreateSystem, CreateConstants
 
 def general_equation(Err, B, P, f1 = np.sin, f2 = np.cos, _n = 8):
     """ 
@@ -108,6 +108,9 @@ BETA = np.random.normal(300.0, 100.0, 8)
 PHI = np.random.normal( np.random.normal(np.pi, 1.0), 0.05, 8)
 ERR = np.random.normal( 0.0, 5.0e-5, 8 )
 
+
+Q, u, v = CreateSystem(BETA, PHI, ERR)
+
 print(f"BETA: {BETA}")
 print(f"PHI: {PHI}")
 print(f"ERR: {ERR}")
@@ -133,3 +136,7 @@ print(system_of_equations(ERR, BETA, PHI, n=8))
 print("n=8 ALT")
 print(system_of_equations_ALT(ERR, BETA, PHI, n=8))
 print()
+
+print()
+print("Matricial formulation")
+print(CreateConstants(Q, u, v))
