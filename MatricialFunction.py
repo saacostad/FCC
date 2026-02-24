@@ -1,6 +1,28 @@
 import numpy as np 
 
 
+def NeummanInverse(T, grad = 8):
+    """
+    This function creates the Neuman Truncated Inverse of
+
+    (1 - p\hat M \hat {\Delta K})
+
+    according to the formula
+
+    (1 - p\hat M \hat {\Delta K})^{-1} = sum_{k = 1}^{grad} (p \hat M \hat \Delta K)^k 
+    """
+    n = T.shape[0]
+    I = np.eye(n, dtype=T.dtype)
+    
+    S = I.copy()
+    Tk = I.copy()
+    
+    for _ in range(1, grad):
+        Tk = Tk @ T
+        S += Tk
+        
+    return S
+
 
 def CreateQ(B, P, K, p, grad):
     """
@@ -36,10 +58,13 @@ def CreateQ(B, P, K, p, grad):
 
 
     # Now we create the whole matrix in parenthesis and we invert it 
-    # TODO: make the Neumman inversion method
     #---------------------------------------------------------------------------
-
-    Q = hatK @ np.linalg.inv(np.eye(n) - p * hatM @ hatK)
+    
+    if grad == 8:
+        Q = hatK @ np.linalg.inv(np.eye(n) - p * hatM @ hatK)
+    else:
+        print("calculating inverse with Neumman")
+        Q = hatK @ NeummanInverse(p * hatM @ hatK, grad)
 
     return Q
 

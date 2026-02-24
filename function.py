@@ -104,12 +104,11 @@ def system_of_equations(ERR, B, P, n = 8):
 
 
 
-BETA = np.random.normal(300.0, 100.0, 8)
+BETA = np.abs(np.random.normal(300.0, 100.0, 8))
 PHI = np.random.normal( np.random.normal(np.pi, 1.0), 0.05, 8)
 ERR = np.random.normal( 0.0, 5.0e-5, 8 )
 
 
-Q, u, v = CreateSystem(BETA, PHI, ERR)
 
 print(f"BETA: {BETA}")
 print(f"PHI: {PHI}")
@@ -121,22 +120,24 @@ print("n=1 OR")
 print(system_of_equations(ERR, BETA, PHI, n=1))
 print("n=1 ALT")
 print(system_of_equations_ALT(ERR, BETA, PHI, n=1))
-print()
+print("n=1 MATRICIAL")
+Q, u, v = CreateSystem(BETA, PHI, ERR, grad = 1)
+print(CreateConstants(Q, u, v))
 
 print()
 print("n=2 OR")
 print(system_of_equations(ERR, BETA, PHI, n=2))
 print("n=2 ALT")
 print(system_of_equations_ALT(ERR, BETA, PHI, n=2))
-print()
+Q, u, v = CreateSystem(BETA, PHI, ERR, grad = 2)
+print("n=2 MATRICIAL")
+print(CreateConstants(Q, u, v))
 
 print()
 print("n=8 OR")
 print(system_of_equations(ERR, BETA, PHI, n=8))
 print("n=8 ALT")
 print(system_of_equations_ALT(ERR, BETA, PHI, n=8))
-print()
-
-print()
-print("Matricial formulation")
+Q, u, v = CreateSystem(BETA, PHI, ERR)
+print("n=8 MATRICIAL")
 print(CreateConstants(Q, u, v))
