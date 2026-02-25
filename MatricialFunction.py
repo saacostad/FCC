@@ -24,7 +24,21 @@ def NeummanInverse(T, grad = 8):
     return S
 
 
-def CreateQ(B, P, K, p, grad):
+def CreateM(B, P):
+    # We create the matrix M 
+    #-------------------------------
+
+    n = len(P)  # Number of Quadrupoles
+    
+    hatM = np.zeros((n, n))    # Create a square matrix first
+
+    i, j = np.tril_indices(n, k=-1) # Take only the indexes of the lower triangular section
+    
+    hatM[i, j] = np.sin(P[i] - P[j]) * np.sqrt(B[i] * B[j])    # Fill the gaps with what we need 
+
+    return hatM
+
+def CreateQ(hatM, K, p, grad = 8):
     """
     This function creates the Q matrix given that 
 
@@ -43,24 +57,12 @@ def CreateQ(B, P, K, p, grad):
 
     # Matrix form of \Delta K
     hatK = np.diag(K)
-    
-
-    # We create the matrix M 
-    #-------------------------------
-
-    n = len(P)  # Number of Quadrupoles
-    
-    hatM = np.zeros((n, n))    # Create a square matrix first
-
-    i, j = np.tril_indices(n, k=-1) # Take only the indexes of the lower triangular section
-    
-    hatM[i, j] = np.sin(P[i] - P[j]) * np.sqrt(B[i] * B[j])    # Fill the gaps with what we need 
-
-
+   
     # Now we create the whole matrix in parenthesis and we invert it 
     #---------------------------------------------------------------------------
     
-    if grad == 8:
+    n = len(K) 
+    if grad == hatM.shape[0]:
         Q = hatK @ np.linalg.inv(np.eye(n) - p * hatM @ hatK)
     else:
         print("calculating inverse with Neumman")
@@ -70,7 +72,7 @@ def CreateQ(B, P, K, p, grad):
 
     
 
-def CreateSystem(B, P, K, p = 1, grad = 8):
+def CreateSystem(B, P, K, p = 1.0, grad = 8):
     """
     This function takes the system's \beta's, \phi's and quadrupole magnetic errors \Delta K
     and returns a tuple with the matrix \hat Q, and the vectors \vec u and \vec v following that
@@ -83,8 +85,9 @@ def CreateSystem(B, P, K, p = 1, grad = 8):
 
     u = np.sqrt(B) * np.sin(P)
     v = np.sqrt(B) * np.cos(P)
+    hatM = CreateM(B, P)
 
-    Q = CreateQ(B, P, K, p, grad)
+    Q = CreateQ(hatM, K, p, grad)
 
     return Q, u, v
 
