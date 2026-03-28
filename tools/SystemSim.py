@@ -44,7 +44,7 @@ def simulate_z(B, P, Err, p=1.0, J = 1.0, d0 = 0.0):
 
     for j<N 
     ---------------------------------------------------------------------------------------------------------
-    Returns a tuple with the z and \Delta z measurements
+    Returns a tuple with the z, z0, and \Delta z measurements
     """
     
     # We first simulate the perfect measurements 
@@ -61,8 +61,21 @@ def simulate_z(B, P, Err, p=1.0, J = 1.0, d0 = 0.0):
         z.append( z0[i] + Dz_s)
         Dz.append( Dz_s )
     
-    return (z, Dz)
+    return (z, z0, Dz)
 
     
+
+
+
+def simZ0_mat(u, v, J0 = 1.0, d0 = 0.0):
+
+    return (np.cos(d0) * u - np.sin(d0) * v) * np.sqrt(2.0 * J0) 
+
+
+
+def createConstants_2b(u, v, R):
+    
+    return (v @ R, u @ R)
+
 
 

@@ -65,7 +65,7 @@ def CreateQ(hatM, K, p, grad = 8):
     if grad == hatM.shape[0]:
         Q = hatK @ np.linalg.inv(np.eye(n) - p * hatM @ hatK)
     else:
-        print("calculating inverse with Neumman")
+        # print("calculating inverse with Neumman")
         Q = hatK @ NeummanInverse(p * hatM @ hatK, grad)
 
     return Q

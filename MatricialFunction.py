@@ -65,14 +65,14 @@ def CreateQ(hatM, K, p, grad = 8):
     if grad == hatM.shape[0]:
         Q = hatK @ np.linalg.inv(np.eye(n) - p * hatM @ hatK)
     else:
-        print("calculating inverse with Neumman")
+        # print("calculating inverse with Neumman")
         Q = hatK @ NeummanInverse(p * hatM @ hatK, grad)
 
     return Q
 
     
 
-def CreateSystem(B, P, K, p = 1.0, grad = 8):
+def CreateSystem(B, P, K, p = 2.0, grad = 8):
     """
     This function takes the system's \beta's, \phi's and quadrupole magnetic errors \Delta K
     and returns a tuple with the matrix \hat Q, and the vectors \vec u and \vec v following that
@@ -104,3 +104,24 @@ def CreateConstants(Q, u, v):
     """
 
     return(v @ Q @ u, v @ Q @ v, u @ Q @ u, u @ Q @ v)
+
+
+def createFirstOrderMatrix(ux, vx, uy, vy):
+    """ This function creates the "first order matrix", that is, approximation the system to first order 
+    and writting \hat G \vec Delta k = \vec a, \hat G would be the first order matrix """
+    
+    rows = [ux * vx, vx * vx,ux * ux, ux * vx,
+            uy * vy, vy * vy,uy * uy, uy * vy,]
+
+    return np.array(rows)
+
+
+
+
+"""
+HERE I'LL TRY TO CREATE THE SYSTEM WITH ONLY 2 BASES SIN(PSI) AND COS(PSI)
+"""
+
+
+    
+    

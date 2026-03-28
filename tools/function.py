@@ -15,7 +15,7 @@ def general_equation(Err, B, P, f1 = np.sin, f2 = np.cos, _n = 8):
     f2: the second trignometric function to model 
     n: the order of the equation (default = 8)
     ------------------------------------------------------------------------------------------------
-    In general, the equation returned is the following (taking indexes starting from 1)
+    In general, the equation returned is the following      (taking indexes starting from 1)
 
     $$          \sum_{i=1}^{n} Err[i] * B[i] f1(P[i]) * f2([p1])  
                 + \sum_{i=2}^{n} \sum{j=1}^{i-1} f1(P[i]) * f2(P[i]) 
@@ -145,18 +145,25 @@ These are exercises to check the veracity of my thinguis
 # print("n=8 JD")
 # print(system_of_equations(ERR, BETA, PHI, n=8))
 
-print("n=8 NIC")
 # print(system_of_equations_ALT(ERR, BETA, PHI, n=8))
 
+
+
+"""     PRINTINGS RAROS """
 
 system = EquationSystemDefinition(BETA, PHI, ERR)
 A_full = system.build_A_full()
 Q_full = system.build_Q_full()
 
-constants = A_full + Q_full
+# constants = A_full + Q_full
+constants = A_full
 
 print(constants)
-Q, u, v = CreateSystem(BETA, PHI, ERR, grad=2)
+
+
+
+""" matricial """
+Q, u, v = CreateSystem(BETA, PHI, ERR, grad=1)
 
 print("n=8 MATRICIAL")
 print(CreateConstants(Q, u, v))
