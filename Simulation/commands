@@ -1,13 +1,14 @@
 
-home_dir=$(readlink -f $(dirname $(readlink -f "$0"))/../..)
+home_dir=$(dirname "$(readlink -f "$0")")
 ###Hacer una copia exacta del directorio apj/ en su home_dir
 ###Descargar la última version de madx en  https://mad.web.cern.ch/mad/, copiarla en algún directorio (en este ejemplo $home_dir/bin/), darle un nombre que la identifique (en este ejemplo madx), y si es necesario modificar la siguiente linea 
 madx_program=$home_dir/madx
 ###Es posible que tenga que cambiar python por otro nombre
 ###################Nominal Files ############################
 
+echo $home_dir
 
-python  $home_dir/get_nom_files.py -id=$home_dir/fcc_ee_data  -od=$home_dir/fcc_ee_test_simulation/ -b=1 -mx=$madx_program  -nc
+python  "$home_dir/get_nom_files.py" -id="$home_dir/fcc_ee"  -od="$home_dir/fcc_ee_test_simulation/" -b=1 -mx="$madx_program" --accel="fcc_ee"  -nc
 # python  $home_dir/get_nom_files.py -id=$home_dir/apj/lhc/b2/  -od=$home_dir/IR1_simu/b2_optic_files/ -b=2 -mx=$madx_program -nc
 
 

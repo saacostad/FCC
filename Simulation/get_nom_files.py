@@ -142,15 +142,21 @@ call(["mkdir","-p", out_dir])           # We create a new folder for the output
 dirty_twiss_name = None                 # The .madx file from where we'll start the simulation
 
 # The madx file from where we'll get the simulation for the twiss files done
-match accel_name:
-    case "lhc":
-        # dirty_twiss_name = "job.twiss.madx"                       # In the case we want to work with the original
-        dirty_twiss_name = "get_real_twiss_data.madx"
-    case "hl_lhc":
-        # dirty_twiss_name = "job.twiss.madx"                       # In the case we want to work with the original
-        dirty_twiss_name = "get_real_twiss_data.madx"
-    case "fcc_ee":
-        dirty_twiss_name = "get_real_twiss_data.madx"               # We'll just try to leave everything in a default value 
+# match accel_name:
+#     case "lhc":
+#         # dirty_twiss_name = "job.twiss.madx"                       # In the case we want to work with the original
+#         dirty_twiss_name = "get_real_twiss_data.madx"
+#     case "hl_lhc":
+#         # dirty_twiss_name = "job.twiss.madx"                       # In the case we want to work with the original
+#         dirty_twiss_name = "get_real_twiss_data.madx"
+#     case "fcc_ee":
+#         dirty_twiss_name = "get_real_twiss_data.madx"               # We'll just try to leave everything in a default value 
+
+
+if accel_name in ["lhc", "hl_lhc"]:
+    dirty_twiss_name = "get_real_twiss_data.madx"
+else:
+    dirty_twiss_name = "get_real_twiss_data.madx"
 
 
 # The original twiss file 
@@ -171,132 +177,142 @@ job_orig_file = input_dir + "/" + dirty_twiss_name
 
 # --------------------------------------------------------------------------------------------------------
 
-
-# We'll copy the get_twiss_data.madx to the output directory 
-call(["cp",job_orig_file,out_dir])
-
-# We copy the .madx file to get the twiss back into the output dir                          
-job_file =  out_dir + dirty_twiss_name
-
-# From here we'll create the nominal lattice simulation
-template_file= apj_files_dir + 'b' + beam +'/' + 'nom.madx'
+beam = args.beam
 nominal_file= out_dir  + "nominal_lattice.madx"
 
-# Probably where we'll save out data up                                                     <- 
-twiss_file = '"' + out_dir  + "twiss.dat" + '"'
+# In the case we are using the fcc data, we already have most of it formatted and really do not need further more
+if accel_name != "fcc_ee":
+    
+    # We'll copy the get_twiss_data.madx to the output directory 
+    call(["cp",job_orig_file,out_dir])
 
-# Basic command to perform our twiss meditions
-twiss_command= f'exec, do_twiss_monitors({args.sequence_name}'+ beam + ',' +  twiss_file + ', 0.0);'
+    # We copy the .madx file to get the twiss back into the output dir                          
+    job_file =  out_dir + dirty_twiss_name
 
+    # From here we'll create the nominal lattice simulation
+    template_file= apj_files_dir + 'b' + beam +'/' + 'nom.madx'
+    nominal_file= out_dir  + "nominal_lattice.madx"
 
-# Opening files to read and write 
-jobf = open(job_file,'r')               # Our dirty twiss 
-templ=open(template_file,'r')           # Our nominal twiss
+    # Probably where we'll save out data up                                                     <- 
+    twiss_file = '"' + out_dir  + "twiss.dat" + '"'
 
-nomf=open(nominal_file,'w')             # Where we'll write to
-
-
-
-# We'll check first our dirty twiss files 
-for line in jobf:
-
-    # This is the condition that actually matters to us (running locally)
-    # What this block does is to rewritte the dirty twiss.madx file but with our local directions 
-    if (args.no_cern_afs):
-            if ('madx_macros' in line):
-                # Here we'll simply make all the callables local to our machine: from jfcp -> local machine
-                lines = line.split('"')
-                macro_path = lines[1]
-                new_path = apj_files_dir +  'madx_macros/' + os.path.basename(macro_path)
-                print('call , file = "' + new_path + '";', file=nomf)
-
-                """
-                    IMPORTANT: here, they call a lot of macros, but the only function they use from them is the 
-                    `define_nominal_beams()` function on lhc.macros.madx, which basically defines the beams with protons, 
-                    the given energy and bunches...
-                    `cycle_sequences()` which tells the program to use a periodic sequence 
-                    `set_default_crossing_scheme()` which, I think only tells the simulator we're on a no-experiments run
-                """
-
-            elif ('madx_modifiers' in line):
-                # Same thing here
-                lines = line.split('"')
-                macro_path = lines[1]
-                new_path = apj_files_dir +  'madx_modifiers/' + os.path.basename(macro_path)
-                print('call , file = "' + new_path + '";', file=nomf)    
-
-                """ 
-                    IMPORTANT: they do the same here, but this time, every modifier does something, which is basically modify or add 
-                    information about the run (I think)
-                """
-
-            elif ('twiss_ac' in line or 'twiss_adt' in line or 'twiss_elements' in line or 'twiss_monitors' in line):
-                if ('twiss_monitors' in line):
-                    print(twiss_command, file=nomf)
-                else:
-                    print('!', end=' ', file=nomf)
-                    print(line.strip(), file=nomf)       
-            else: print(line.strip(), file=nomf)
-    else:
-            if ('twiss_ac' in line or 'twiss_adt' in line or 'twiss_elements' in line or 'twiss_monitors' in line):
-                # Same thing but 
-                if ('twiss_monitors' in line):
-                    print(twiss_command, file=nomf)
-                else:
-                    print('!', end=' ', file=nomf)
-                    print(line.strip(), file=nomf)       
-            else: print(line.strip(), file=nomf)        
-
-jobf.close()
-nomf.close()
+    # Basic command to perform our twiss meditions
+    twiss_command= f'exec, do_twiss_monitors({args.sequence_name}'+ beam + ',' +  twiss_file + ', 0.0);'
 
 
-# We copy the file we just created into get_real_twiss_data.madx
-call(['cp',nominal_file,out_dir + 'get_real_twiss_data.madx'])
-nomf=open(nominal_file,'a')
+    # Opening files to read and write 
+    jobf = open(job_file,'r')               # Our dirty twiss 
+    templ=open(template_file,'r')           # Our nominal twiss
 
-for line in templ:
-    # I think it basically rewrittes the information of the nominal.madx 
-    # back into the new .madx we're building in the output directory. Apparently no changes at all 
-    if ('twiss.optics' in line):
-        new_file = out_dir + 'twiss.optics'
-        newline=line.replace("twiss.optics",new_file)
-    elif ('twiss_c.optics' in line):
-        new_file = out_dir + 'twiss_c.optics'
-        newline=line.replace("twiss_c.optics",new_file)
-    elif ('twiss_shifted.dat' in line):
-        new_file = out_dir  + 'twiss_shifted.dat'
-        newline=line.replace("twiss_shifted.dat",new_file)
-    elif ('Quad_KyL.txt' in line):
-        new_file = out_dir  + 'Quad_KyL.txt'
-        newline=line.replace("Quad_KyL.txt",new_file)
-    elif ('my_model' in line):
-        new_file = out_dir  + 'my_model'
-        newline=line.replace("my_model",new_file)
-    else:
-        newline = line
+    nomf=open(nominal_file,'w')             # Where we'll write to
 
-    print(newline.strip(), file=nomf)           # It writes to the nomf file: nominal_lattice.madx
 
-templ.close()    
-nomf.close()
 
+    # We'll check first our dirty twiss files 
+    for line in jobf:
+
+        # This is the condition that actually matters to us (running locally)
+        # What this block does is to rewritte the dirty twiss.madx file but with our local directions 
+        if (args.no_cern_afs):
+                if ('madx_macros' in line):
+                    # Here we'll simply make all the callables local to our machine: from jfcp -> local machine
+                    lines = line.split('"')
+                    macro_path = lines[1]
+                    new_path = apj_files_dir +  'madx_macros/' + os.path.basename(macro_path)
+                    print('call , file = "' + new_path + '";', file=nomf)
+
+                    """
+                        IMPORTANT: here, they call a lot of macros, but the only function they use from them is the 
+                        `define_nominal_beams()` function on lhc.macros.madx, which basically defines the beams with protons, 
+                        the given energy and bunches...
+                        `cycle_sequences()` which tells the program to use a periodic sequence 
+                        `set_default_crossing_scheme()` which, I think only tells the simulator we're on a no-experiments run
+                    """
+
+                elif ('madx_modifiers' in line):
+                    # Same thing here
+                    lines = line.split('"')
+                    macro_path = lines[1]
+                    new_path = apj_files_dir +  'madx_modifiers/' + os.path.basename(macro_path)
+                    print('call , file = "' + new_path + '";', file=nomf)    
+
+                    """ 
+                        IMPORTANT: they do the same here, but this time, every modifier does something, which is basically modify or add 
+                        information about the run (I think)
+                    """
+
+                elif ('twiss_ac' in line or 'twiss_adt' in line or 'twiss_elements' in line or 'twiss_monitors' in line):
+                    if ('twiss_monitors' in line):
+                        print(twiss_command, file=nomf)
+                    else:
+                        print('!', end=' ', file=nomf)
+                        print(line.strip(), file=nomf)       
+                else: print(line.strip(), file=nomf)
+        else:
+                if ('twiss_ac' in line or 'twiss_adt' in line or 'twiss_elements' in line or 'twiss_monitors' in line):
+                    # Same thing but 
+                    if ('twiss_monitors' in line):
+                        print(twiss_command, file=nomf)
+                    else:
+                        print('!', end=' ', file=nomf)
+                        print(line.strip(), file=nomf)       
+                else: print(line.strip(), file=nomf)        
+
+    jobf.close()
+    nomf.close()
+
+
+    # We copy the file we just created into get_real_twiss_data.madx
+    call(['cp',nominal_file,out_dir + 'get_real_twiss_data.madx'])
+    nomf=open(nominal_file,'a')
+
+    for line in templ:
+        # I think it basically rewrittes the information of the nominal.madx 
+        # back into the new .madx we're building in the output directory. Apparently no changes at all 
+        if ('twiss.optics' in line):
+            new_file = out_dir + 'twiss.optics'
+            newline=line.replace("twiss.optics",new_file)
+        elif ('twiss_c.optics' in line):
+            new_file = out_dir + 'twiss_c.optics'
+            newline=line.replace("twiss_c.optics",new_file)
+        elif ('twiss_shifted.dat' in line):
+            new_file = out_dir  + 'twiss_shifted.dat'
+            newline=line.replace("twiss_shifted.dat",new_file)
+        elif ('Quad_KyL.txt' in line):
+            new_file = out_dir  + 'Quad_KyL.txt'
+            newline=line.replace("Quad_KyL.txt",new_file)
+        elif ('my_model' in line):
+            new_file = out_dir  + 'my_model'
+            newline=line.replace("my_model",new_file)
+        else:
+            newline = line
+
+        print(newline.strip(), file=nomf)           # It writes to the nomf file: nominal_lattice.madx
+
+    templ.close()    
+    nomf.close()
+
+    
+    print(nominal_file, " was created, running madx...")
+
+else:
+    # TODO: change automatically the CALL, FILE = "fccee_t.seq" line in the .madx file so it has no problems when doing this
+    """ If we're working on the fcc, then we'll just copy the twiss file """
+    call(['cp', f'{input_dir}/b{beam}/{dirty_twiss_name}', f'{out_dir}nominal_lattice.madx'])
 
 
 # Get the madx executable
 madx_exec=args.mad_program
 
 
-print(nominal_file, " was created, running madx...")
-
-
 # Dir stuff to know where we are
 current_dir = os.getcwd()
 os.chdir(out_dir)
-
-
+# os.chdir(input_dir + f"/b{beam}/")
 # Call madx on the nominal file we just created
+print("Calling madx")
 with open(out_dir + "madx.out", "wb") as madxout:  call([madx_exec, nominal_file], stdout=madxout)
+print("madx ended")
 os.chdir(current_dir)
 
 
