@@ -264,6 +264,9 @@ if accel_name != "fcc_ee":
 
     # We copy the file we just created into get_real_twiss_data.madx
     call(['cp',nominal_file,out_dir + 'get_real_twiss_data.madx'])
+
+
+
     nomf=open(nominal_file,'a')
 
     for line in templ:
@@ -298,7 +301,50 @@ if accel_name != "fcc_ee":
 else:
     # TODO: change automatically the CALL, FILE = "fccee_t.seq" line in the .madx file so it has no problems when doing this
     """ If we're working on the fcc, then we'll just copy the twiss file """
-    call(['cp', f'{input_dir}/b{beam}/{dirty_twiss_name}', f'{out_dir}nominal_lattice.madx'])
+        
+    print("Using FCC_ee configs")
+
+    nominal_file= out_dir  + "nominal_lattice.madx"
+
+    call(['cp', f'{input_dir}/b{beam}/{dirty_twiss_name}', f'{nominal_file}'])
+
+    # Open the original for reading and a temp file for writing
+    with open(nominal_file, 'r') as f_in, open(f"{nominal_file}.tmp", 'w') as f_out:
+        for line in f_in:
+            newline = line  # Start with the original line
+            
+            # Apply the changes
+            if "fccee_t.seq" in line:
+                newline = line.replace("fccee_t.seq", f'{input_dir}/b{beam}/fccee_t.seq')
+            if "twiss.dat" in line:
+                newline = line.replace("twiss.dat", f'{out_dir}twiss.dat')
+            if "twiss_c.dat" in line:
+                newline = line.replace("twiss_c.dat", f'{out_dir}twiss_c.dat')
+            if "twiss.optics" in line:
+                newline = line.replace("twiss.optics", f'{out_dir}twiss.optics')
+            if "twiss_c.optics" in line:
+                newline = line.replace("twiss_c.optics", f'{out_dir}twiss_c.optics')
+            
+            # Write the processed line to the new file
+            f_out.write(newline)
+
+        # Now, we'll recreate the "my_model" file, which is just the measurements at observation points, this case, all the quadrupoles
+        f_out.write("\n\n\n !MY_MODEL TWISS: creating the twiss at the observation points \n\n\n")
+        f_out.write(f'call, file="{input_dir}/b{beam}/quad.obs_ptc.madx";')
+
+        command = f'''
+        select, flag=twiss, clear;
+        select, flag=twiss,pattern="^Q.*",column=name,s,betx,mux,bety,muy,x,y,alfx,alfy;
+        select, flag=twiss,pattern="^IP*",column=name,s,betx,mux,bety,muy,x,y,alfx,alfy;
+        twiss, file="my_model";
+        '''
+        
+        f_out.write(command)
+    # Replace the old file with the new one
+    os.replace(f"{nominal_file}.tmp", nominal_file)
+    
+
+
 
 
 # Get the madx executable
@@ -395,16 +441,12 @@ I don't really think this is going to be used for now for the FCC
 
 """
 
-
-twiss_optics=out_dir  + "twiss.optics"              # twiss.optics
+"""
+# TODO: I'll have to check if we want to do this for all the quadrupoles of the accelerator or what
 QLyKf_file=out_dir  + "Quad_KyL.txt"                # Quadrupole integrals
 integral_out=out_dir  + "integrals.dat"             # Quadrupole integrals already calcualted
-
 QLyKf=open(QLyKf_file,'r')
-twiss=open(twiss_optics,'r')
 fout = open(integral_out,'w')
-
-
 # Variables to calculate everything
 name=[]
 length=[]
@@ -419,8 +461,11 @@ for i in QLyKf:
             name.append(il[0])
             length.append(float(il[3].strip(',')))
             strength.append(float(il[4]))
+"""
 
 
+twiss_optics=out_dir  + "twiss.dat"              # twiss.optics
+twiss=open(twiss_optics,'r')
 
 
 # And here, we save the lattice parameters of ALL the elements of the accelerator
@@ -449,8 +494,11 @@ for j in twiss:
     # This conditional will basically position us on the actual data
     if ('$' in jl[0]): flag = 1
 
+twiss.close()
 
 
+
+"""
 # Here we perform different calculations that, so far, I think are not that needed                                                      <-
 for k in name:
     
@@ -474,12 +522,9 @@ for k in name:
 
 
 QLyKf.close()
-twiss.close()
 fout.close()
 print(integral_out, ' was created')
-
-
-
+"""
 
 
 """
@@ -491,17 +536,25 @@ so we can create the rectangle graphs we usually see
 # TODO what are the identificators for???
 
 
+twiss_optics=out_dir  + "twiss.optics"
 twiss_optics_c=out_dir  + "twiss_c.optics"
 twiss=open(twiss_optics,'r')
 twiss_c=open(twiss_optics_c,'r')
 
 optics_file= out_dir  + 'optics.out'
 opt=open(optics_file,'w')
+
 for line in twiss:
+
+    if ('@' in line) or ('*' in line) or ('$' in line) : 
+        line_c = twiss_c.readline()
+        continue 
+    
+    print(line)
     lines=line.split()
-    line_c = twiss_c.readline()
     line_cs=line_c.split()
-    if ('MB' in line):
+
+    if ('MB' in line) or ('B' in line):
         s_out = float(lines[1])
         s_c = float(line_cs[1])
         s_in = s_c - (s_out -s_c)
@@ -510,7 +563,7 @@ for line in twiss:
         print(lines[0], s_out, 1, file=opt)
         print(lines[0], s_out, 0, file=opt)
 
-    if ('MQ' in line):
+    if ('MQ' in line) or ('Q' in line):
         s_out = float(lines[1])
         s_c = float(line_cs[1])
         s_in = s_c - (s_out -s_c)
@@ -533,7 +586,10 @@ twiss_c.close()
 
 print(optics_file, ' was created \n')
 
-
 version_file = open(out_dir + 'version_get_nom_files.dat','a')
 print("Version", version, "timestamp", datetime.datetime.now(), file=version_file)
 version_file.close()
+
+
+
+# TODO mymodel should have the bending magnets too
