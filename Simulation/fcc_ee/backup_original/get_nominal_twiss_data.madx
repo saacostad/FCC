@@ -1,0 +1,107 @@
+
+seqedit, sequence=LHCB1; ! The first monitor in data acquisition is BPMYB.5L2.B1
+flatten;
+!cycle, start=MSIA.EXIT.B1; !inyeccion
+cycle, start=BPM.8L4.B1; !ac_dipole
+endedit;
+use, period=LHCB1;
+
+ksf.b1         :=     0;  // Turning off chromaticity correctors
+ksd.b1         :=     0;
+ksf.b2         :=     0;
+ksd.b2         :=     0;
+
+
+
+
+exec, do_twiss_monitors(LHCB1, "twiss_shifted.dat", 0.0);
+
+!!! Para crear optics.out y triplet.dat
+select, flag=twiss, clear;
+select, flag=twiss,column=name,s,betx,mux,bety,muy,x,y,alfx,alfy;
+twiss, file="twiss.optics";
+twiss, file="twiss_c.optics", centre=True;
+
+ASSIGN, ECHO="Quad_KyL.txt", TRUNCATE;
+PRINTF, TEXT="MQML.6L5.B1  length  strength:  %f, %f",VALUE= MQML.6L5.B1->L,MQML.6L5.B1->K1 ;
+PRINTF, TEXT="MQML.5L5.B1  length  strength:  %f, %f",VALUE= MQML.5L5.B1->L,MQML.5L5.B1->K1 ;
+PRINTF, TEXT="MQY.4L5.B1  length  strength:  %f, %f",VALUE= MQY.4L5.B1->L,MQY.4L5.B1->K1 ; 
+PRINTF, TEXT="MQXA.3L5  length  strength:  %f, %f",VALUE= MQXA.3L5->L,MQXA.3L5->K1 ;
+PRINTF, TEXT="MQSX.3L5  length  strength:  %f, %f",VALUE= MQSX.3L5->L,MQSX.3L5->K1 ;
+PRINTF, TEXT="MQXB.B2L5  length  strength:  %f, %f",VALUE= MQXB.B2L5->L,MQXB.B2L5->K1 ;
+PRINTF, TEXT="MQXB.A2L5  length  strength:  %f, %f",VALUE= MQXB.A2L5->L,MQXB.A2L5->K1 ;
+PRINTF, TEXT="MQXA.1L5  length  strength:  %f, %f",VALUE= MQXA.1L5->L,MQXA.1L5->K1 ;
+PRINTF, TEXT="MQXA.1R5  length  strength:  %f, %f",VALUE= MQXA.1R5->L,MQXA.1R5->K1 ;
+PRINTF, TEXT="MQXB.A2R5  length  strength:  %f, %f",VALUE= MQXB.A2R5->L,MQXB.A2R5->K1 ;
+PRINTF, TEXT="MQXB.B2R5  length  strength:  %f, %f",VALUE= MQXB.B2R5->L,MQXB.B2R5->K1 ;
+PRINTF, TEXT="MQSX.3R5  length  strength:  %f, %f",VALUE= MQSX.3R5->L,MQSX.3R5->K1 ;
+PRINTF, TEXT="MQXA.3R5  length  strength:  %f, %f",VALUE= MQXA.3R5->L,MQXA.3R5->K1 ;
+PRINTF, TEXT="MQY.4R5.B1  length  strength:  %f, %f",VALUE= MQY.4R5.B1->L,MQY.4R5.B1->K1 ;
+PRINTF, TEXT="MQML.5R5.B1  length  strength:  %f, %f",VALUE= MQML.5R5.B1->L,MQML.5R5.B1->K1 ;
+PRINTF, TEXT="MQML.6R5.B1  length  strength:  %f, %f",VALUE= MQML.6R5.B1->L,MQML.6R5.B1->K1 ;
+
+
+
+PRINTF, TEXT="MQML.6L1.B1  length  strength:  %f, %f",VALUE= MQML.6L1.B1->L,MQML.6L1.B1->K1 ;
+PRINTF, TEXT="MQML.5L1.B1  length  strength:  %f, %f",VALUE= MQML.5L1.B1->L,MQML.5L1.B1->K1 ;
+PRINTF, TEXT="MQY.4L1.B1  length  strength:  %f, %f",VALUE= MQY.4L1.B1->L,MQY.4L1.B1->K1 ;
+PRINTF, TEXT="MQXA.3L1  length  strength:  %f, %f",VALUE= MQXA.3L1->L,MQXA.3L1->K1 ;
+PRINTF, TEXT="MQXB.B2L1  length  strength:  %f, %f",VALUE= MQXB.B2L1->L,MQXB.B2L1->K1 ;
+PRINTF, TEXT="MQXB.A2L1  length  strength:  %f, %f",VALUE= MQXB.A2L1->L,MQXB.A2L1->K1 ;
+PRINTF, TEXT="MQXA.1L1  length  strength:  %f, %f",VALUE= MQXA.1L1->L,MQXA.1L1->K1 ;
+PRINTF, TEXT="MQSX.3L1  length  strength:  %f, %f",VALUE= MQSX.3L1->L,MQSX.3L1->K1 ;
+PRINTF, TEXT="MQXA.1R1  length  strength:  %f, %f",VALUE= MQXA.1R1->L,MQXA.1R1->K1 ;
+PRINTF, TEXT="MQXB.A2R1  length  strength:  %f, %f",VALUE= MQXB.A2R1->L,MQXB.A2R1->K1 ;
+PRINTF, TEXT="MQXB.B2R1  length  strength:  %f, %f",VALUE= MQXB.B2R1->L,MQXB.B2R1->K1 ;
+PRINTF, TEXT="MQSX.3R1  length  strength:  %f, %f",VALUE= MQSX.3R1->L,MQSX.3R1->K1 ;
+PRINTF, TEXT="MQXA.3R1  length  strength:  %f, %f",VALUE= MQXA.3R1->L,MQXA.3R1->K1 ;
+PRINTF, TEXT="MQY.4R1.B1  length  strength:  %f, %f",VALUE= MQY.4R1.B1->L,MQY.4R1.B1->K1 ;
+PRINTF, TEXT="MQML.5R1.B1  length  strength:  %f, %f",VALUE= MQML.5R1.B1->L,MQML.5R1.B1->K1 ;
+PRINTF, TEXT="MQML.6R1.B1  length  strength:  %f, %f",VALUE= MQML.6R1.B1->L,MQML.6R1.B1->K1 ;
+
+
+!PRINTF, TEXT="MQML.6L2.B1  length  strength:  %f, %f",VALUE= MQML.6L2.B1->L,MQML.6L2.B1->K1 ;
+!PRINTF, TEXT="MQML.5L2.B1  length  strength:  %f, %f",VALUE= MQML.5L2.B1->L,MQML.5L2.B1->K1 ;
+!PRINTF, TEXT="MQY.4L2.B1  length  strength:  %f, %f",VALUE= MQY.4L2.B1->L,MQY.4L2.B1->K1 ; 
+PRINTF, TEXT="MQXA.3L2  length  strength:  %f, %f",VALUE= MQXA.3L2->L,MQXA.3L2->K1 ;
+PRINTF, TEXT="MQSX.3L2  length  strength:  %f, %f",VALUE= MQSX.3L2->L,MQSX.3L2->K1 ;
+PRINTF, TEXT="MQXB.B2L2  length  strength:  %f, %f",VALUE= MQXB.B2L2->L,MQXB.B2L2->K1 ;
+PRINTF, TEXT="MQXB.A2L2  length  strength:  %f, %f",VALUE= MQXB.A2L2->L,MQXB.A2L2->K1 ;
+PRINTF, TEXT="MQXA.1L2  length  strength:  %f, %f",VALUE= MQXA.1L2->L,MQXA.1L2->K1 ;
+PRINTF, TEXT="MQXA.1R2  length  strength:  %f, %f",VALUE= MQXA.1R2->L,MQXA.1R2->K1 ;
+PRINTF, TEXT="MQXB.A2R2  length  strength:  %f, %f",VALUE= MQXB.A2R2->L,MQXB.A2R2->K1 ;
+PRINTF, TEXT="MQXB.B2R2  length  strength:  %f, %f",VALUE= MQXB.B2R2->L,MQXB.B2R2->K1 ;
+PRINTF, TEXT="MQSX.3R2  length  strength:  %f, %f",VALUE= MQSX.3R2->L,MQSX.3R2->K1 ;
+PRINTF, TEXT="MQXA.3R2  length  strength:  %f, %f",VALUE= MQXA.3R2->L,MQXA.3R2->K1 ;
+!PRINTF, TEXT="MQY.4R2.B1  length  strength:  %f, %f",VALUE= MQY.4R2.B1->L,MQY.4R2.B1->K1 ;
+!PRINTF, TEXT="MQML.5R2.B1  length  strength:  %f, %f",VALUE= MQML.5R2.B1->L,MQML.5R2.B1->K1 ;
+!PRINTF, TEXT="MQML.6R2.B1  length  strength:  %f, %f",VALUE= MQML.6R2.B1->L,MQML.6R2.B1->K1 ;
+
+
+
+
+PRINTF, TEXT="MQXA.3L8  length  strength:  %f, %f",VALUE= MQXA.3L8->L,MQXA.3L8->K1 ;
+PRINTF, TEXT="MQSX.3L8  length  strength:  %f, %f",VALUE= MQSX.3L8->L,MQSX.3L8->K1 ;
+PRINTF, TEXT="MQXB.B2L8  length  strength:  %f, %f",VALUE= MQXB.B2L8->L,MQXB.B2L8->K1 ;
+PRINTF, TEXT="MQXB.A2L8  length  strength:  %f, %f",VALUE= MQXB.A2L8->L,MQXB.A2L8->K1 ;
+PRINTF, TEXT="MQXA.1L8  length  strength:  %f, %f",VALUE= MQXA.1L8->L,MQXA.1L8->K1 ;
+PRINTF, TEXT="MQXA.1R8  length  strength:  %f, %f",VALUE= MQXA.1R8->L,MQXA.1R8->K1 ;
+PRINTF, TEXT="MQXB.A2R8  length  strength:  %f, %f",VALUE= MQXB.A2R8->L,MQXB.A2R8->K1 ;
+PRINTF, TEXT="MQXB.B2R8  length  strength:  %f, %f",VALUE= MQXB.B2R8->L,MQXB.B2R8->K1 ;
+PRINTF, TEXT="MQSX.3R8  length  strength:  %f, %f",VALUE= MQSX.3R8->L,MQSX.3R8->K1 ;
+PRINTF, TEXT="MQXA.3R8  length  strength:  %f, %f",VALUE= MQXA.3R8->L,MQXA.3R8->K1 ;
+
+
+
+!!use, period=LHCB1;
+!!! Para crear betas
+select, flag=twiss, clear;
+select, flag=twiss,class=monitor,column=name,s,betx,mux,bety,muy,x,y,alfx,alfy;
+select, flag=twiss,pattern="^MQSX.*",column=name,s,betx,mux,bety,muy,x,y;
+select, flag=twiss,pattern="^IP*",column=name,s,betx,mux,bety,muy,x,y;
+!!select, flag=twiss,column=name,s,betx,mux,bety,muy,x,y,alfx,alfy;
+!use, period=LHCB1;
+twiss, file="my_model";
+
+
+

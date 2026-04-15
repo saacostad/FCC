@@ -1,0 +1,60 @@
+!	This file is called by get_nom_files.py and it's main purpose is to 
+!	obtain the lattice data of the --REAL-- accelerator. In order to get 
+!	data for the nominal design, check `nom.madx`	
+
+
+option, -echo;
+call, file = "/Users/jfcp/apj/lhc/madx_macros/beta_beat.macros.madx";
+call, file = "/Users/jfcp/apj/lhc/madx_macros/lhc.macros.madx";
+call, file = "/Users/jfcp/apj/lhc/madx_macros/lhc_runII.macros.madx";
+call, file = "/Users/jfcp/apj/lhc/madx_macros/lhc_runII_ats.macros.madx";
+call, file = "/Users/jfcp/apj/lhc/madx_macros/lhc_runIII_2022.macros.madx";
+
+option, echo;
+
+title, "Model creator for java";
+
+!@require lhc_runIII_2022.macros.madx
+
+option, -echo;
+
+call, file = "/Users/jfcp/apj/lhc/madx_modifiers/lhc.seq";
+
+exec, define_nominal_beams();
+
+
+!!In CERN AFS this is all contain in modifiers.madx
+call, file="/Users/jfcp/apj/lhc/madx_modifiers/zero-strengths.madx";
+call, file="/Users/jfcp/apj/lhc/madx_modifiers/ats_30cm.madx";
+call, file="/Users/jfcp/apj/lhc/madx_modifiers/reset-bump-flags.madx";
+call, file="/Users/jfcp/apj/lhc/madx_modifiers/match-lumiknobs.madx";
+call, file="/Users/jfcp/apj/lhc/madx_modifiers/generate-op-tune-knobs-ats.madx";
+call, file="/Users/jfcp/apj/lhc/madx_modifiers/generate-op-chroma-knobs-ats.madx";
+call, file="/Users/jfcp/apj/lhc/madx_modifiers/generate-op-coupling-knobs-ats.madx";
+
+
+
+
+
+exec, cycle_sequences();
+
+if(0==1){
+    exec, set_crossing_scheme_ON();
+}else{
+    exec, set_default_crossing_scheme();
+}
+
+use, period = LHCB1;
+
+option, echo;
+
+exec, match_tunes(0.28, 0.31, 1);
+
+!exec, do_twiss_monitors(LHCB1, "/user/slops/data/LHC_DATA/OP_DATA/Betabeat/2022-04-27/models/LHCB1/b1_30cm_forlocal_2022/twiss.dat", 0.0);
+!exec, do_twiss_elements(LHCB1, "/user/slops/data/LHC_DATA/OP_DATA/Betabeat/2022-04-27/models/LHCB1/b1_30cm_forlocal_2022/twiss_elements.dat", 0.0);
+
+!if(1 == 1){
+!    exec, twiss_ac_dipole(0.28, 0.31, 0.27, 0.322, 1, "/user/slops/data/LHC_DATA/OP_DATA/Betabeat/2022-04-27/models/LHCB1/b1_30cm_forlocal_2022/twiss_ac.dat", 0.0);
+!}else if(0 == 1){
+!    exec, twiss_adt(0.28, 0.31, 0.27, 0.322, 1, "/user/slops/data/LHC_DATA/OP_DATA/Betabeat/2022-04-27/models/LHCB1/b1_30cm_forlocal_2022/twiss_adt.dat", 0.0);
+!}
