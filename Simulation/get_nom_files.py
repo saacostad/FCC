@@ -71,7 +71,24 @@ def betaxbetay_int(L, alphax, betax,alphay, betay, KK, beam):
         return math.sqrt((beta_f(x, alphax, betax,  KK, '-x', beam))*(beta_f(x, alphay, betay,  KK, '-y', beam)))
     res, err = quad(betxbety_aux, 0, L)
     return res           
+
+def rename_mag(magnet_name, accel = "fcc_ee"):
+    mag = magnet_name.split('.')
+
+    if accel == "fcc_ee":
+        # So far, we do not need new names for our quadrupoles, so we just don't change them when working with the fcc
+        return magnet_name
     
+    newname = None
+    if ((mag[0] =='MQXA' and mag[1][0] =='3') or (mag[0] =='MQXFA' and mag[1][1] =='3')): newname = 'Q3'+ mag[1][-2]+mag[1][-1]
+    if ((mag[0] =='MQXA' and mag[1][0] =='1') or (mag[0] =='MQXFA' and mag[1][1] =='1')): newname = 'Q1'+ mag[1][-2]+mag[1][-1]
+    if (mag[0] =='MQXB' or mag[0] =='MQXFB' ):newname = 'Q2'+ mag[1][-2]+mag[1][-1]
+    if (mag[0] =='MQSX'): newname = 'MQSX'+'.'+mag[1]
+    if (mag[0] == 'MQY' and mag[1][0] =='4'):newname = 'Q4' + mag[1][-2]+mag[1][-1]
+    if (mag[0] == 'MQY' and mag[1][0] =='5'): newname = 'Q5' + mag[1][-2]+mag[1][-1]
+    if (mag[0] == 'MQML' and mag[1][0] =='5'): newname = 'Q5' + mag[1][-2]+mag[1][-1]
+    if (mag[0] == 'MQML' and mag[1][0] =='6'): newname = 'Q6' + mag[1][-2]+mag[1][-1]   
+    return newname
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -287,6 +304,9 @@ if accel_name != "fcc_ee":
         elif ('my_model' in line):
             new_file = out_dir  + 'my_model'
             newline=line.replace("my_model",new_file)
+        # elif ('fccee_integral.seq' in line):
+        #     new_file = out_dir  + 'fccee_integral.seq'
+        #     newline=line.replace("fccee_integral.seq",new_file)
         else:
             newline = line
 
@@ -441,7 +461,6 @@ I don't really think this is going to be used for now for the FCC
 
 """
 
-"""
 # TODO: I'll have to check if we want to do this for all the quadrupoles of the accelerator or what
 QLyKf_file=out_dir  + "Quad_KyL.txt"                # Quadrupole integrals
 integral_out=out_dir  + "integrals.dat"             # Quadrupole integrals already calcualted
@@ -453,19 +472,19 @@ length=[]
 strength=[]
 
 
+
 # In this part, we save the physical parameters of the quadrupoles 
 for i in QLyKf:
     il = i.split(None)
     if (len(il) > 0):
-        if ('MQ' in il[0]):
+        if ('MQ' in il[0]) or ('Q' in il[0]):
             name.append(il[0])
             length.append(float(il[3].strip(',')))
             strength.append(float(il[4]))
-"""
-
 
 twiss_optics=out_dir  + "twiss.dat"              # twiss.optics
 twiss=open(twiss_optics,'r')
+
 
 
 # And here, we save the lattice parameters of ALL the elements of the accelerator
@@ -482,7 +501,7 @@ flag=0
 for j in twiss:
     jl=j.split(None)
     if (flag):
-        namet.append(jl[0].strip('"'))
+        namet.append(jl[0].strip('"').split(".")[0])
         ss.append(float(jl[1]))
         betx.append(float(jl[2]))
         alfx.append(float(jl[8]))
@@ -497,8 +516,6 @@ for j in twiss:
 twiss.close()
 
 
-
-"""
 # Here we perform different calculations that, so far, I think are not that needed                                                      <-
 for k in name:
     
@@ -524,7 +541,6 @@ for k in name:
 QLyKf.close()
 fout.close()
 print(integral_out, ' was created')
-"""
 
 
 """
@@ -532,8 +548,6 @@ print(integral_out, ' was created')
 Here, we'll get the lenght (in and out positions) of different elements 
 so we can create the rectangle graphs we usually see 
 """
-
-# TODO what are the identificators for???
 
 
 twiss_optics=out_dir  + "twiss.optics"
