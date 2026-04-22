@@ -1,0 +1,36 @@
+errq2l1 =  0.001 ;
+errq1r1 = -0.0018 ; 
+!errq1l1 =  0.00 ;
+!errq1r1 = 0.00 ; 
+
+
+
+QC1L1.1, K1 := K1QC1L1 + errq1l1 ; 
+QC1R1.2, K1 := K1QC1R1 + errq1r1 ; 
+
+TWISS, FILE = "twiss_t_b1_nottapered_err.tfs", TOLERANCE=1E-12; ! Twiss without radiation and tapering
+
+
+
+zx = 0.000025;
+zpx = 0;
+zy = 0.000001;
+zpy = 0;
+
+
+
+
+
+PTC_CREATE_UNIVERSE;
+PTC_CREATE_LAYOUT,model=2,method=6, nst=10;
+PTC_START,x =zx, px =zpx, y = zy, py = zpy ;
+call, file="quad.obs_ptc.madx";
+PTC_TRACK,icase=4, CLOSED_ORBIT=false ,dump,
+element_by_element,
+turns=100,file="track_fcc", ffile=1, norm_no=1,
+onetable;
+PTC_TRACK_END;
+PTC_END;
+
+
+

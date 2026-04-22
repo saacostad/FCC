@@ -1,4 +1,7 @@
-call, file = "IR_errors.madx"
+PRINT, TEXT="Starting errors twiss and tracking";
+
+CALL, FILE = "IR_errors.madx"
+PRINT, TEXT="Read errors";
 
 TWISS, FILE = "twiss_err.tfs", TOLERANCE=1E-12; ! Twiss without radiation and tapering
 

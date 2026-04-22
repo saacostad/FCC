@@ -81,13 +81,13 @@ if args.random_flag:
         name = QP["NAME"] # We get the name of the QP  
 
         # We'll write the errors for each of the quadrupoles 
-        print(f"{name}->K1 = {name}->K1 + {np.random.normal(0.0, float(args.random_sigma))}", file = e_f)
+        print(f"{name}->K1 = {name}->K1 + {np.random.normal(0.0, float(args.random_sigma))};", file = e_f)
 else:
     for _, QP in filtered_df.iterrows():
         
         name = QP["NAME"] # We get the name of the QP  
 
         # We'll write the errors for each of the quadrupoles 
-        print(f"{name}->K1 = {name}->K1 + 0.0", file = e_f)
+        print(f"{name}, K1 := K1{name.split('.')[0]};", file = e_f)
 
 e_f.close()
