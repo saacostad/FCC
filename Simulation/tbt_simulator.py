@@ -49,7 +49,7 @@ def multiturn2sddsnew(in_file,out_file):
                     bpms.append(sline[5].upper())
                 else:
                     # Or simply add the data of interest of each measurement
-                    turn.append(int(sline[colturn]))
+                    turn.append(int(float(sline[colturn])))
                     x.append(float(sline[colx])*1000.0)
                     y.append(float(sline[coly])*1000.0)
                     s.append(sline[cols])
@@ -288,7 +288,7 @@ else:
     sim_tbt_dir =  out_dir+ "sim_tbt/"
 
 # Symbolic link just because idk
-call(["ln","-s",model_dir + "/" + 'acc-models-lhc',out_dir + 'acc-models-lhc'])
+# call(["ln","-s",model_dir + "/" + 'acc-models-lhc',out_dir + 'acc-models-lhc'])
 
 
 # Create the folder with the very raw tbt data
@@ -318,11 +318,12 @@ for line in templ:
         new_file = apj_files_dir + '/b'+beam+ '/' + 'bpm.obs_ptc.madx'
         bpm_obs_file= new_file
         newline=line.replace("bpm.obs_ptc.madx",new_file)
-    if ('quad.obs_ptc.madx' in line):
+
+    elif ("quad.obs_ptc.madx" in line):
         # In the case we're using the quadrupoles
-        new_file = apj_files_dir + '/b'+beam+ '/' + 'quad.obs_ptc.madx'
+        new_file = apj_files_dir + 'b'+beam+ '/' + 'quad.obs_ptc.madx'
         bpm_obs_file= new_file
-        newline = line.replace("quad.obs_ptc.madx",new_file)
+        newline = line.replace("quad.obs_ptc.madx",bpm_obs_file)
 
     elif ('IR_errors.madx' in line):
         # The file where we'll place the errors
@@ -362,7 +363,9 @@ for line in templ:
            newline ='turns = 1, file = " '+track_out+' ", ffile=1, norm_no=1,'
         else:
            newline = 'turns=' + args.number_turns + ',file="'+track_out+'", ffile=1, norm_no=1,'
-
+    elif ('twiss_err.tfs' in line):
+        new_file = out_dir + 'twiss_err.tfs'
+        newline=line.replace("twiss_err.tfs",new_file)
     else:
         # Default case
         newline = line
@@ -518,7 +521,8 @@ if (args.twiss):
     if (args.accel == 'lhc'): strengthq1l = float(strength[nameq.index('MQXA.1L' + ip)])
     if (args.accel == 'hl_lhc' and (args.ip == '5' or args.ip == '1')): strengthq1l = float(strength[nameq.index('MQXFA.A1L' + ip)])
     if (args.accel == 'fcc_ee'): 
-        number_from_ip = None 
+        number_from_ip = None
+        ip = int(ip)
         if ip in [1, 8]:
             number_from_ip = 4
         elif ip in [2, 3]:
@@ -528,34 +532,34 @@ if (args.twiss):
         elif ip in [6, 7]:
             number_from_ip = 3
 
-        strengthq1l = float(strength[nameq.index(f"QC1L1.{number_from_ip}")])
+        strengthq1l = float(strength[nameq.index(f"QC1L1")])
+    else:
+        # Check if the qp is F or D 
+        if(strengthq1l < 0 ):
+            if (beam == '1'):
+                wx_lhc = wx
+                wy_lhc = -wy
+            if (beam == '2'):
+                wx_lhc = -wx
+                wy_lhc = wy
 
-    # Check if the qp is F or D 
-    if(strengthq1l < 0 ):
-        if (beam == '1'):
-            wx_lhc = wx
-            wy_lhc = -wy
-        if (beam == '2'):
-            wx_lhc = -wx
-            wy_lhc = wy
-
-    if(strengthq1l > 0 ):
-        if (beam == '1'):
-            wx_lhc = -wx
-            wy_lhc = wy
-        if (beam == '2'):
-            wx_lhc = wx
-            wy_lhc = -wy
+        if(strengthq1l > 0 ):
+            if (beam == '1'):
+                wx_lhc = -wx
+                wy_lhc = wy
+            if (beam == '2'):
+                wx_lhc = wx
+                wy_lhc = -wy
 
 
-    outx = 'ip'+ip+'b'+beam+'.X' + '\t\t' + str(betaipx) + '\t\t' + '0'+ '\t' + str(wx_lhc) + '\t\t' + '0'+ '\t' +str(bwx)  + '\t\t' + '0'
-    outy = 'ip'+ip+'b'+beam+'.Y' + '\t\t' + str(betaipy) + '\t\t' + '0'+ '\t' + str(wy_lhc) + '\t\t' + '0'+ '\t' +str(bwy)  + '\t\t' + '0'
+        outx = 'ip'+ip+'b'+beam+'.X' + '\t\t' + str(betaipx) + '\t\t' + '0'+ '\t' + str(wx_lhc) + '\t\t' + '0'+ '\t' +str(bwx)  + '\t\t' + '0'
+        outy = 'ip'+ip+'b'+beam+'.Y' + '\t\t' + str(betaipy) + '\t\t' + '0'+ '\t' + str(wy_lhc) + '\t\t' + '0'+ '\t' +str(bwy)  + '\t\t' + '0'
 
-    print(outx, file=outp)
-    print(outy, file=outp)
-    print("File",out_dir + 'ip.results',"created\n")
+        print(outx, file=outp)
+        print(outy, file=outp)
+        print("File",out_dir + 'ip.results',"created\n")
 
-    outp.close()
+        outp.close()
 else:
     # If we do not want the laticce functions of the error laticce, then we just delete them
     call(['rm', '-f', out_dir + 'lattice_err.asc'])
