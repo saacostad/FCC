@@ -52,7 +52,7 @@ SAVEBETA, LABEL=B.IP, PLACE=#s, SEQUENCE=FCCEE_P_RING;
 
 ! Twiss.optics contains the infor of all the elements
 select, flag=twiss, clear;
-select, flag=twiss,column=name,s,betx,mux,bety,muy,x,y,alfx,alfy;
+select, flag=twiss,column=name,s,betx,mux,bety,muy,x,y,alfx,alfy, keyword;
 TWISS, FILE = "twiss.optics", TOLERANCE=1E-12; ! Twiss without radiation and tapering
 TWISS, FILE = "twiss_c.optics", TOLERANCE=1E-12 , centre=True; ! Twiss without radiation and tapering centered
 
@@ -60,8 +60,8 @@ TWISS, FILE = "twiss_c.optics", TOLERANCE=1E-12 , centre=True; ! Twiss without r
 ! Twiss.dat contain only info of the quadrupoles and IPs
 
 select, flag=twiss, clear;
-select, flag=twiss,pattern="^Q.*",column=name,s,betx,mux,bety,muy,x,y,alfx,alfy;
-select, flag=twiss,pattern="^IP.*",column=name,s,betx,mux,bety,muy,x,y,alfx,alfy;
+select, flag=twiss,pattern="^Q.*",column=name,s,betx,mux,bety,muy,x,y,alfx,alfy, keyword;
+select, flag=twiss,pattern="^IP.*",column=name,s,betx,mux,bety,muy,x,y,alfx,alfy, keyword;
 
 TWISS, FILE = "twiss.dat", TOLERANCE=1E-12; ! Twiss without radiation and tapering
 TWISS, FILE = "twiss_c.dat", TOLERANCE=1E-12 , centre=True; ! Twiss without radiation and tapering centered
@@ -181,7 +181,9 @@ PRINTF, TEXT="QC2L2 length strength: %f, %f",VALUE= QC2L2->L, QC2L2->K1 ;
 PRINTF, TEXT="QC2L1 length strength: %f, %f",VALUE= QC2L1->L, QC2L1->K1 ;
 PRINTF, TEXT="QC1L3 length strength: %f, %f",VALUE= QC1L3->L, QC1L3->K1 ;
 PRINTF, TEXT="QC1L2 length strength: %f, %f",VALUE= QC1L2->L, QC1L2->K1 ;
-PRINTF, TEXT="QC2L1 length strength: %f, %f",VALUE= QC1L1->L, QC1L1->K1 ;
+PRINTF, TEXT="QC2L1 length strength: %f, %f",VALUE= QC2L1->L, QC2L1->K1 ;
+PRINTF, TEXT="QC1L1 length strength: %f, %f",VALUE= QC1L1->L, QC1L1->K1 ;
+PRINTF, TEXT="QHHHH"
 
 
 

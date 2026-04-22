@@ -1,4 +1,4 @@
-call, file = "errors.madx"
+call, file = "IR_errors.madx"
 
 TWISS, FILE = "twiss_err.tfs", TOLERANCE=1E-12; ! Twiss without radiation and tapering
 
@@ -13,10 +13,10 @@ zpy = 0;
 PTC_CREATE_UNIVERSE;
 PTC_CREATE_LAYOUT,model=2,method=6, nst=10;
 PTC_START,x =zx, px =zpx, y = zy, py = zpy ;
-call, file="quad.obs_ptc.madx";
+call,file="quad.obs_ptc.madx";
 PTC_TRACK,icase=4, CLOSED_ORBIT=false ,dump,
 element_by_element,
-turns=100,file="track_fcc", ffile=1, norm_no=1,
+turns=100,file = "track_fcc", ffile=1, norm_no=1,
 onetable;
 PTC_TRACK_END;
 PTC_END;
