@@ -73,7 +73,7 @@ filtered_df = get_elements_around_ip(df, args.IP, float(args.window))
 
 
 # Now, we'll write the errors and corrections files 
-e_f = open("errors.madx",'w')
+e_f = open("IR_errors.madx",'w')
 
 if args.random_flag:
     for _, QP in filtered_df.iterrows():
