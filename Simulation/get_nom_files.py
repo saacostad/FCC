@@ -564,7 +564,6 @@ for line in twiss:
         line_c = twiss_c.readline()
         continue 
     
-    print(line)
     lines=line.split()
     line_cs=line_c.split()
 

@@ -490,23 +490,29 @@ if (args.twiss):
     print('$ %s                 %le               %le            %le              %le           %le              %le     ', file=outp)
 
 
-    # Now we check the quadrupoles
+    # Now we check the quadrupoles physical parameters
     QLyKf_file = model_dir  + "Quad_KyL.txt"
     QLyKf=open(QLyKf_file,'r')
 
+    
+    # We'll save the quadrupoles data 
     nameq=[]
     length=[]
     strength=[]
     for i in QLyKf:
         il = i.split(None)
-        if (len(il) > 0):
-            if ('MQ' in il[0]):
+        if (len(il) > 0):         # This rh is for the FCC
+            if ('MQ' in il[0]) or ('Q' in il[0]):
                 nameq.append(il[0])
                 length.append(float(il[3].strip(',')))
                 strength.append(float(il[4]))
     QLyKf.close()
+    
+    # TODO check which QP we need for the fcc 
     if (args.accel == 'lhc'): strengthq1l = float(strength[nameq.index('MQXA.1L' + ip)])
     if (args.accel == 'hl_lhc' and (args.ip == '5' or args.ip == '1')): strengthq1l = float(strength[nameq.index('MQXFA.A1L' + ip)])
+
+    # Check if the qp is F or D 
     if(strengthq1l < 0 ):
         if (beam == '1'):
             wx_lhc = wx
@@ -530,8 +536,10 @@ if (args.twiss):
     print(outx, file=outp)
     print(outy, file=outp)
     print("File",out_dir + 'ip.results',"created\n")
+
     outp.close()
 else:
+    # If we do not want the laticce functions of the error laticce, then we just delete them
     call(['rm', '-f', out_dir + 'lattice_err.asc'])
     call(['rm', '-f', out_dir + 'ip.results'])
     call(['rm', '-f', out_dir + 'twiss_err.optics'])
@@ -539,29 +547,33 @@ else:
     call(['rm', '-f', out_dir + 'my_model_err'])
     
 
-    
+# Here we just convert the tracking files to the format we actually use 
 if (args.tbt_dir != None):    #To generate avermax according to initial conditions
     in_filex =  out_dir + "trackoneh"
     out_filex = sim_tbt_dir + "trackoneh.sdds.new"
     in_filey =  out_dir + "trackonev"
     out_filey = sim_tbt_dir + "trackonev.sdds.new"
+
     multiturn2sddsnew(in_filex,out_filex)
     print("\n")
+
     multiturn2sddsnew(in_filey,out_filey)
     print("\n")
+
     trackx=[line.split(None) for line in open(out_filex)]
     tracky=[line.split(None) for line in open(out_filey)]
+    
+    # We re-format the output so both axis are saved to a single file
     track_f= open(sim_tbt_dir + 'avermax.sdds.new','w')
     for i in range(len(trackx)):
         if i > 0:
             print(trackx[i][0], trackx[i][1], trackx[i][2],trackx[i][3], tracky[i][3], file=track_f)
     track_f.close()
 
-    #call(['rm', '-f', sim_tbt_dir + 'trackone'])
-    #call(['rm', '-f', sim_tbt_dir + 'sim_tbt.sdds.new'])
     print("File", sim_tbt_dir + 'avermax.sdds.new', "created")
-else:#To generate TBT data
-     ###############Creating sdds file##################################################
+
+else:
+    # In the case we only want to create the tbt data
     in_file =  out_dir + 'trackone'
     out_file = sim_tbt_dir + 'sim_tbt.sdds.new'
     multiturn2sddsnew(in_file,out_file)
