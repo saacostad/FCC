@@ -197,7 +197,7 @@ acc_name = args.accel
 apj_files_dir = None        # Where the model files are located
 if (args.accel == 'lhc'): apj_files_dir = os.path.dirname(sys.argv[0]) + '/lhc/'
 if (args.accel == 'hl_lhc'):apj_files_dir= os.path.dirname(sys.argv[0]) + '/hl_lhc/'    
-if (args.accel == 'hl_lhc'):apj_files_dir= os.path.dirname(sys.argv[0]) + '/fcc_ee/'    
+if (args.accel == 'fcc_ee'):apj_files_dir= os.path.dirname(sys.argv[0]) + '/fcc_ee/'    
 
 model_dir=args.model_dir
 beam = args.beam
@@ -216,6 +216,12 @@ if (args.accel == 'lhc'):
     lipl5 = 21.564
     lipr5 = 21.564
 if (args.accel == 'hl_lhc'):
+    lipl1 = 21.853
+    lipr1 = 21.853 
+    lipl5 = 21.853
+    lipr5 = 21.853    
+if (args.accel == 'fcc_ee'):
+    # We need to check this later
     lipl1 = 21.853
     lipr1 = 21.853 
     lipl5 = 21.853
@@ -262,7 +268,7 @@ call(["mkdir","-p", out_dir])
 # We'll save up the model we used, which for each accel, will be different 
 job_file = None 
 if acc_name == "fcc_ee":
-    job_file=model_dir + "/" + "nominal_laticce.madx"
+    job_file=model_dir + "nominal_lattice.madx"
 else:
     job_file=model_dir + "/" + "job.twiss_out.madx"
 
@@ -447,44 +453,47 @@ if (args.twiss):
     if (args.accel == 'hl_lhc' and (args.ip == '1' or args.ip == '5')):
         bpmsw1l1 = '"'+'BPMSQ.1L'+ ip +'.B'+beam+'"'
         bpmsw1r1 = '"'+'BPMSQ.1R'+ ip +'.B'+beam+'"'        
+    
+    if (args.accel == "fcc_ee"):
+        print("Checking fcc_ee") 
+    else:
+        # Get data from the files that will be used to get the measurement of beta_waist for x axis
+        betllx = betz[nameel.index(bpmsw1l1)]*(1.000)
+        betrrx = betz[nameel.index(bpmsw1r1)]
+        phi_llx = psiz[nameel.index(bpmsw1l1)]/(2*np.pi)
+        phi_rrx = psiz[nameel.index(bpmsw1r1)]/(2*np.pi)
+        bw_guess = betzn[nameeln.index('"IP'+ip + '"')]
+        
+        # From the guess of beta_waist, solve the equations to find bw
+        bwx,wx = fsolve(equations, (bw_guess, 0.01), args=(betllx,betrrx))
 
-    # Get data from the files that will be used to get the measurement of beta_waist for x axis
-    betllx = betz[nameel.index(bpmsw1l1)]*(1.000)
-    betrrx = betz[nameel.index(bpmsw1r1)]
-    phi_llx = psiz[nameel.index(bpmsw1l1)]/(2*np.pi)
-    phi_rrx = psiz[nameel.index(bpmsw1r1)]/(2*np.pi)
-    bw_guess = betzn[nameeln.index('"IP'+ip + '"')]
-    
-    # From the guess of beta_waist, solve the equations to find bw
-    bwx,wx = fsolve(equations, (bw_guess, 0.01), args=(betllx,betrrx))
+        # And from these, find the beta at the IP 
+        # TODO for x axis this betaipx calculation is done BEFORE the gauss. For y axis it is after
+        betaipx = bwx + (wx**2)/bwx
+        
+        # TODO maybe doing something to check for the error???
+        sigma_w = 0
+        wx = wx + gauss(0,sigma_w)
+        sigma_bw = 0
+        bwx = bwx + gauss(0,sigma_bw)
 
-    # And from these, find the beta at the IP 
-    # TODO for x axis this betaipx calculation is done BEFORE the gauss. For y axis it is after
-    betaipx = bwx + (wx**2)/bwx
-    
-    # TODO maybe doing something to check for the error???
-    sigma_w = 0
-    wx = wx + gauss(0,sigma_w)
-    sigma_bw = 0
-    bwx = bwx + gauss(0,sigma_bw)
-
-    
-    # Do the exact same thing but for the y axis
-    nameel,sel,betz,psiz,alfz=leer_beta_mu3(latticefilename,'-y')
-    betlly = betz[nameel.index(bpmsw1l1)]*(1.000)
-    betrry = betz[nameel.index(bpmsw1r1)]
-    phi_lly = psiz[nameel.index(bpmsw1l1)]/(2*np.pi)
-    phi_rry = psiz[nameel.index(bpmsw1r1)]/(2*np.pi)
-    bw_guess = betzn[nameeln.index('"IP'+ip + '"')]
-    bwy,wy = fsolve(equations, (bw_guess, 0.01), args=(betlly,betrry))
-    wy = wy + gauss(0,sigma_w)
-    bwy = bwy + gauss(0,sigma_bw)
-    betaipy = bwy + (wy**2)/bwy
-    
-    # Write these results in a format we can handle
-    outp = open(out_dir + 'ip.results','w')
-    print('* LABEL		  BETASTAR   	  BETASTAR_ERR      WAIST          WAIST_ERR      BETAWAIST   	BETAWAIST_ERR', file=outp) 
-    print('$ %s                 %le               %le            %le              %le           %le              %le     ', file=outp)
+        
+        # Do the exact same thing but for the y axis
+        nameel,sel,betz,psiz,alfz=leer_beta_mu3(latticefilename,'-y')
+        betlly = betz[nameel.index(bpmsw1l1)]*(1.000)
+        betrry = betz[nameel.index(bpmsw1r1)]
+        phi_lly = psiz[nameel.index(bpmsw1l1)]/(2*np.pi)
+        phi_rry = psiz[nameel.index(bpmsw1r1)]/(2*np.pi)
+        bw_guess = betzn[nameeln.index('"IP'+ip + '"')]
+        bwy,wy = fsolve(equations, (bw_guess, 0.01), args=(betlly,betrry))
+        wy = wy + gauss(0,sigma_w)
+        bwy = bwy + gauss(0,sigma_bw)
+        betaipy = bwy + (wy**2)/bwy
+        
+        # Write these results in a format we can handle
+        outp = open(out_dir + 'ip.results','w')
+        print('* LABEL		  BETASTAR   	  BETASTAR_ERR      WAIST          WAIST_ERR      BETAWAIST   	BETAWAIST_ERR', file=outp) 
+        print('$ %s                 %le               %le            %le              %le           %le              %le     ', file=outp)
 
 
     # Now we check the quadrupoles physical parameters
@@ -508,6 +517,18 @@ if (args.twiss):
     # TODO check which QP we need for the fcc 
     if (args.accel == 'lhc'): strengthq1l = float(strength[nameq.index('MQXA.1L' + ip)])
     if (args.accel == 'hl_lhc' and (args.ip == '5' or args.ip == '1')): strengthq1l = float(strength[nameq.index('MQXFA.A1L' + ip)])
+    if (args.accel == 'fcc_ee'): 
+        number_from_ip = None 
+        if ip in [1, 8]:
+            number_from_ip = 4
+        elif ip in [2, 3]:
+            number_from_ip = 1 
+        elif ip in [4, 5]:
+            number_from_ip = 2 
+        elif ip in [6, 7]:
+            number_from_ip = 3
+
+        strengthq1l = float(strength[nameq.index(f"QC1L1.{number_from_ip}")])
 
     # Check if the qp is F or D 
     if(strengthq1l < 0 ):
