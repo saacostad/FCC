@@ -532,7 +532,8 @@ if (args.twiss):
         elif ip in [6, 7]:
             number_from_ip = 3
 
-        strengthq1l = float(strength[nameq.index(f"QC1L1")])
+        strengthq1l = float(strength[nameq.index(f"QC1L1.1")])  # These are the left-side QP
+
     else:
         # Check if the qp is F or D 
         if(strengthq1l < 0 ):
