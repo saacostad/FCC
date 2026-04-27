@@ -61,6 +61,13 @@ def get_elements_around_ip(df, ip_name, window):
 
     return df[mask].sort_values("S_SHIFTED")
 
+def get_qp(df):
+    """ This function will get the quadrupoles around a given IP """
+
+    mask = (df["KEYWORD"] == "QUADRUPOLE")
+
+    return df[mask].sort_values("S")
+
 
 # We will read the lines of our .seq file
 input_file_path = args.input_file
@@ -91,3 +98,14 @@ else:
         print(f"{name}, K1 := K1{name.split('.')[0]};", file = e_f)
 
 e_f.close()
+
+
+q_f = open("QP_creator.madx", "w")
+qps_df = get_qp(df)
+
+for _, QP in qps_df.iterrows():
+    
+    name = QP["NAME"]
+    
+    print(f'PRINTF, TEXT="{name} length strength: %f, %f",VALUE= {name}->L, {name}->K1 ;', file = q_f) 
+

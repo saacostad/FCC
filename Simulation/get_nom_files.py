@@ -344,7 +344,10 @@ else:
                 newline = line.replace("twiss.optics", f'{out_dir}twiss.optics')
             if "twiss_c.optics" in line:
                 newline = line.replace("twiss_c.optics", f'{out_dir}twiss_c.optics')
+            if "QP_creator.madx" in line:
+                newline = line.replace("QP_creator.madx", f'{input_dir}/b{beam}/QP_creator.madx')
             
+
             # Write the processed line to the new file
             f_out.write(newline)
 
@@ -518,7 +521,7 @@ twiss.close()
 
 # Here we perform different calculations that, so far, I think are not that needed                                                      <-
 for k in name:
-    
+    # k = k.split(".")[0] 
     # TODO this seems to be specifically for the LHC's formatting
     if ('MQSX' in k ):
         beta_intx = beta_int_skew(length[name.index(k)], alfx[namet.index(k)], betx[namet.index(k)], alfy[namet.index(k)], bety[namet.index(k)])
@@ -531,11 +534,11 @@ for k in name:
             beta_inty = 0
             betxbety = 0
         else:            
-            beta_intx = beta_integral2(length[name.index(k)], alfx[namet.index(k)], betx[namet.index(k)], strength[name.index(k)], '-x', beam)
-            beta_inty = beta_integral2(length[name.index(k)], alfy[namet.index(k)], bety[namet.index(k)], strength[name.index(k)], '-y', beam)
-            betxbety =  betaxbetay_int(length[name.index(k)], alfx[namet.index(k)], betx[namet.index(k)], alfy[namet.index(k)], bety[namet.index(k)],strength[name.index(k)], beam)
+            beta_intx = beta_integral2(length[name.index(k)], alfx[namet.index(k.split(".")[0])], betx[namet.index(k.split(".")[0])], strength[name.index(k)], '-x', beam)
+            beta_inty = beta_integral2(length[name.index(k)], alfy[namet.index(k.split(".")[0])], bety[namet.index(k.split(".")[0])], strength[name.index(k)], '-y', beam)
+            betxbety =  betaxbetay_int(length[name.index(k)], alfx[namet.index(k.split(".")[0])], betx[namet.index(k.split(".")[0])], alfy[namet.index(k.split(".")[0])], bety[namet.index(k.split(".")[0])],strength[name.index(k)], beam)
     k2 = '"'+k+'"'
-    print(k2,  beta_intx, beta_inty, rename_mag(k), mux[namet.index(k)], muy[namet.index(k)], betxbety, file=fout)
+    print(k2,  beta_intx, beta_inty, rename_mag(k), mux[namet.index(k.split(".")[0])], muy[namet.index(k.split(".")[0])], betxbety, file=fout)
 
 
 QLyKf.close()
@@ -563,7 +566,8 @@ for line in twiss:
     if ('@' in line) or ('*' in line) or ('$' in line) : 
         line_c = twiss_c.readline()
         continue 
-    
+   
+    line_c = twiss_c.readline()
     lines=line.split()
     line_cs=line_c.split()
 
