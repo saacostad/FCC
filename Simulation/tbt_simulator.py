@@ -399,6 +399,7 @@ if (args.twiss):
     print('select, flag=twiss, clear;', file=simuf)
     print('select, flag=twiss,class=monitor,column=name,s,betx,mux,bety,muy,x,y,alfx,alfy;', file=simuf)
     print('select, flag=twiss,pattern="^MQSX.*",column=name,s,betx,mux,bety,muy,x,y;', file=simuf)
+    print('select, flag=twiss,pattern="^Q.*",column=name,s,betx,mux,bety,muy,x,y;', file=simuf)
     print('select, flag=twiss,pattern="^IP*",column=name,s,betx,mux,bety,muy,x,y;', file=simuf)
     err_model =  out_dir + 'my_model_err'
     print('twiss, file="'+err_model+'";', file=simuf)

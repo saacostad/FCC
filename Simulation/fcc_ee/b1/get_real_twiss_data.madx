@@ -33,6 +33,38 @@ Ebeam := sqrt( pbeam^2 + emass^2 );
 BEAM, PARTICLE=POSITRON, NPART=Npar, KBUNCH=Nbun, ENERGY=Ebeam, RADIATE=FALSE, BV=+1, EX=EXbeam, EY=EYbeam;
 
 
+// INSTALLATION OF BPMs next to the quadrupoles
+BPMSW.1L1.B1: MONITOR;
+BPMSW.1R1.B1: MONITOR;
+
+BPMSW.1L2.B1: MONITOR;
+BPMSW.1R2.B1: MONITOR;
+
+BPMSW.1L3.B1: MONITOR;
+BPMSW.1R3.B1: MONITOR;
+
+BPMSW.1L4.B1: MONITOR;
+BPMSW.1R4.B1: MONITOR;
+
+
+seqedit, sequence=FCCEE_P_RING;
+  flatten;
+  ! First IP is cut on the .seq 
+  install, element=BPMSW.1L4.B1, at=0.351, from=QC1L1.4;
+  install, element=BPMSW.1R4.B1, at=-0.351, from=QC1R1.1;
+
+  install, element=BPMSW.1L1.B1, at=0.351, from=QC1L1.1;
+  install, element=BPMSW.1R1.B1, at=4.75045, from=QC1L1.1;
+
+  install, element=BPMSW.1L2.B1, at=0.351, from=QC1L1.2;
+  install, element=BPMSW.1R2.B1, at=4.75045, from=QC1L1.2;
+
+  install, element=BPMSW.1L3.B1, at=0.351, from=QC1L1.3;
+  install, element=BPMSW.1R3.B1, at=4.75045, from=QC1L1.3;
+endedit;
+
+
+
 !USE, SEQUENCE = FCCEE_P_RING;
 USE, PERIOD = FCCEE_P_RING;
 
@@ -45,6 +77,7 @@ SHOW, VOLTCA1SAVE, VOLTCA2SAVE;
 // Turn off the cavities for ideal machine twiss and survey
 VOLTCA1 = 0;
 VOLTCA2 = 0;
+
 
 
 // Place where the initial conditions are saved - used for RF matching later if needed

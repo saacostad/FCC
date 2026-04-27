@@ -358,6 +358,7 @@ else:
         command = f'''
         select, flag=twiss, clear;
         select, flag=twiss,pattern="^Q.*",column=name,s,betx,mux,bety,muy,x,y,alfx,alfy;
+        select, flag=twiss,pattern="^BPM.*",column=name,s,betx,mux,bety,muy,x,y,alfx,alfy;
         select, flag=twiss,pattern="^IP*",column=name,s,betx,mux,bety,muy,x,y,alfx,alfy;
         twiss, file="my_model";
         '''
@@ -594,8 +595,7 @@ for line in twiss:
         s_c = float(line_cs[1])
         s_in = s_c - (s_out -s_c)
         print(lines[0], s_in, 0, file=opt)
-        print(lines[0], s_in, 0.25, file=opt)
-        print(lines[0], s_out, 0.25, file=opt)
+        print(lines[0], (s_out + s_in)/2.0, 2.5, file=opt)
         print(lines[0], s_out, 0, file=opt)
 
 twiss.close()
