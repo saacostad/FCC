@@ -8,15 +8,17 @@ madx_program=$home_dir/madx
 
 echo $home_dir
 
-python  "$home_dir/get_nom_files.py" -id="$home_dir/fcc_ee"  -od="$home_dir/fcc_ee_test_simulation/" -b=1 -mx="$madx_program" --accel="fcc_ee"  -nc
+# python  "$home_dir/get_nom_files.py" -id="$home_dir/fcc_ee"  -od="$home_dir/fcc_ee_test_simulation/" -b=1 -mx="$madx_program" --accel="fcc_ee"  -nc
 # python  $home_dir/get_nom_files.py -id=$home_dir/apj/lhc/b2/  -od=$home_dir/IR1_simu/b2_optic_files/ -b=2 -mx=$madx_program -nc
 
 
 # ####################################################TBT Simulations for both beams IR1 (arbitrary number of turns) ######################################################################
-python  "$home_dir/tbt_simulator.py"   -b=1 -ip=5  -ef="$home_dir/IR_errors.madx"    -md="$home_dir/fcc_ee_test_simulation/"  -od="$home_dir/fcc_ee_test_simulation/tbt/" -tw -n=100 -mx="$madx_program" --accel="fcc_ee"
+# python  "$home_dir/tbt_simulator.py"   -b=1 -ip=2  -ef="$home_dir/IR_errors.madx"    -md="$home_dir/fcc_ee_test_simulation/"  -od="$home_dir/fcc_ee_test_simulation/tbt/" -tw -n=100 -mx="$madx_program" --accel="fcc_ee"
 #
-# python  $home_dir/apj/ActionPhaseJump.py -b=1  -ip=1 -ab=BPMSW.1L1.B1 -pb=BPMSW.1R1.B1 -lb=BPMSY.4L1.B1 -rb=BPMSY.4R1.B1  -sf=$home_dir/IR1_simu/b1_tbt_simu/sim_tbt/sim_tbt.sdds.new   -md=$home_dir/IR1_simu/b1_optic_files/    -ml=$home_dir/IR1_simu/b1_tbt_simu/lattice_err.asc  -sk=$home_dir/IR1_simu/b1_tbt_simu/ip.results    -od=$home_dir/IR1_simu/b1_tbt_simu/ -p 
-#
+
+python  "$home_dir/ActionPhaseJump.py" -b=1 --accel="fcc_ee" -ip=2 -ab=BPMSW.1L2.B1 -pb=BPMSW.1L2.B1 -lb=BPMSW.1L2.B1 -rb=BPMSW.1R2.B1  -sf="$home_dir/fcc_ee_test_simulation/tbt/sim_tbt/sim_tbt.sdds.new"   -md="$home_dir/fcc_ee_test_simulation/"    -ml="$home_dir/fcc_ee_test_simulation/tbt/lattice_err.asc"  -sk="$home_dir/fcc_ee_test_simulation/tbt_simu/ip.results"    -od="$home_dir/fcc_ee_test_simulation/tbt_simu/" 
+
+
 # python  $home_dir/apj/tbt_simulator.py   -b=2 -ip=1  -ef=$home_dir/apj/lhc/IR1_errors.madx     -md=$home_dir/IR1_simu/b2_optic_files/  -od=$home_dir/IR1_simu/b2_tbt_simu/ -tw -n=100 -mx=$madx_program
 #
 # python  $home_dir/apj/ActionPhaseJump.py -b=2  -ip=1  -ab=BPMSW.1L1.B2 -pb=BPMSW.1R1.B2 -lb=BPMSY.4L1.B2 -rb=BPMSY.4R1.B2    -sf=$home_dir/IR1_simu/b2_tbt_simu/sim_tbt/sim_tbt.sdds.new   -md=$home_dir/IR1_simu/b2_optic_files/  -ml=$home_dir/IR1_simu/b2_tbt_simu/lattice_err.asc  -sk=$home_dir/IR1_simu/b2_tbt_simu/ip.results  -od=$home_dir/IR1_simu/b2_tbt_simu/ -p

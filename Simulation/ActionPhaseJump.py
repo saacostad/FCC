@@ -10,23 +10,31 @@ from scipy import optimize
 from numpy import polyfit
 from scipy.optimize import minimize_scalar
 from scipy.optimize import curve_fit
-from utils_ActPhase10 import *
+from tools.utils_ActPhase10 import *
 import random
 from random import gauss
 #from Utilities import outliers
-import outliers
+import tools.outliers
 from subprocess import call
 from subprocess import Popen
 import argparse
 import datetime
 #-----------------------------------------------------------------------
 
+"""
+TODO: cambiar los ab rb lb etc etc por los BPMs que puse alrededor de los BPMs        
+HACK: DONE
 
-# TODO cambiar los ab rb lb etc etc por los BPMs que puse alrededor de los BPMs
-# TODO sólo utilizar la opción sf (shifted) para los tbt 
-# TODO Suprimir sk 
-# TODO -p para hacer el plot que no es necesario
 
+TODO: sólo utilizar la opción sf (shifted) para los tbt                               
+HACK: DONE 
+
+TODO: Suprimir sk                                                                                    
+WARN: DARTIALLY DONE (LEFT IT BUT NOT PLANNING TO USE IT)  
+
+TODO: -p para hacer el plot que no es necesario                                        
+HACK: DONE
+"""
 
 version= "Santiago's version 0.9"
 
@@ -114,6 +122,7 @@ def wbw(ipfile,eje, beam, ip, QLyKf_file, accel):
     QLyKf.close()
     if (accel == 'lhc'): strengthq1l = float(strength[nameq.index('MQXA.1L' + ip)])
     if (accel == 'hl_lhc' and (ip == '5' or ip == '1')): strengthq1l = float(strength[nameq.index('MQXFA.A1L' + ip)])
+    else: strengthq1l = 0.0             # WARN: this is a workaround as we'll not use kmod in the fcc
 
         
     bybwfile= open (ipfile,'r')
@@ -297,28 +306,39 @@ def filter1(s_list0, values_list0,bpm_list0,plane):
 
 
 
-
-
 def JyP_trip(averact, averphase, nameel,  psiz,    nm,   betzn,psizn,   w, bw, beam, bpm_phase, ip, accel):
+    
+    # This will keep like this for fcc and lhc, changes for hl_lhc 
     name_BPMSW_l = '"BPMSW.1L' + str(ip) +'.B'+ str(beam)+'"'
     name_BPMSW_r = '"BPMSW.1R' + str(ip) +'.B'+ str(beam)+'"'
-    name_2LBPM = '"BPMS.2L' + str(ip) +'.B'+ str(beam)+'"'
-    name_2RBPM = '"BPMS.2R' + str(ip) +'.B'+ str(beam)+'"'
-    if (accel == 'hl_lhc' and (ip == '1' or ip == '5')):
+
+    if (accel == "lhc"):
+        name_BPMSW_l = '"BPMSW.1L' + str(ip) +'.B'+ str(beam)+'"'
+        name_BPMSW_r = '"BPMSW.1R' + str(ip) +'.B'+ str(beam)+'"'
+        name_2LBPM = '"BPMS.2L' + str(ip) +'.B'+ str(beam)+'"'
+        name_2RBPM = '"BPMS.2R' + str(ip) +'.B'+ str(beam)+'"'
+    elif (accel == 'hl_lhc' and (ip == '1' or ip == '5')):
         name_BPMSW_l = '"BPMSQ.1L' + str(ip) +'.B'+ str(beam)+'"'
         name_BPMSW_r = '"BPMSQ.1R' + str(ip) +'.B'+ str(beam)+'"'
         name_2LBPM = '"BPMSQ.A2L' + str(ip) +'.B'+ str(beam)+'"'
         name_2RBPM = '"BPMSQ.A2R' + str(ip) +'.B'+ str(beam)+'"'        
+
     betll = betzn[nm.index(name_BPMSW_l)]*(1.000)
     betrr = betzn[nm.index(name_BPMSW_r)]
     bw_guess = betzn[nm.index('"IP'+ip + '"')]
     bwn,wn = fsolve(equations, (bw_guess, 0.01), args=(betll,betrr))
-    #print "name_bpm", bpm_phase, name_BPMSW_l,name_BPMSW_r
-    if (bpm_phase == name_BPMSW_l or bpm_phase == name_2LBPM):
-        gammap = psiz[nameel.index(bpm_phase)]+ atan2(lipl+w,bw) - averphase
-    if (bpm_phase == name_BPMSW_r or bpm_phase == name_2RBPM ):
-        gammap = psiz[nameel.index(bpm_phase)] - atan2(lipl-w,bw) - averphase
 
+    # NOTE: in the fcc we do not have these other BPMs (so far), so we just check for the condition on the first BPMs
+    if accel != "fcc_ee":
+        if (bpm_phase == name_BPMSW_l or bpm_phase == name_2LBPM):
+            gammap = psiz[nameel.index(bpm_phase)]+ atan2(lipl+w,bw) - averphase
+        if (bpm_phase == name_BPMSW_r or bpm_phase == name_2RBPM ):
+            gammap = psiz[nameel.index(bpm_phase)] - atan2(lipl-w,bw) - averphase
+    else: 
+        if (bpm_phase == name_BPMSW_l):
+            gammap = psiz[nameel.index(bpm_phase)]+ atan2(lipl+w,bw) - averphase
+        if (bpm_phase == name_BPMSW_r):
+            gammap = psiz[nameel.index(bpm_phase)] - atan2(lipl-w,bw) - averphase
 
     tangamma = (wn-w+tan(gammap)*bw)/bwn
     jota = averact*bwn*cos(gammap)**2*(1+tangamma**2)/bw
@@ -343,7 +363,6 @@ def JyP_trip(averact, averphase, nameel,  psiz,    nm,   betzn,psizn,   w, bw, b
 
 def Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpml,bpmr,selx,nameelx,psix,betx,sL_begin,sR_end,nsigma,selxe,nameelxe,psixe,betxe,wx,bwx,s_acdipole,plane,beam,bpm_phase,ip, method, accel):
     
-    # TODO Modificar BPM name y longitud del acelerador
     s_c=[]
     bpm_c=[]
     xred_c=[]
@@ -372,11 +391,15 @@ def Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpml,bpmr,selx,nameelx,psix,betx,
     x_BPM_l = ''
     x_BPM_r = ''
     col = sdds_col - 4
+
+    # TODO: Modificar BPM name y longitud del acelerador
+    # NOTE: no real need as fcc keeps this accel's name
     bpmswl = '"BPMSW.1L' + str(ip) +'.B'+ str(beam)+'"'
     bpmswr = '"BPMSW.1R' + str(ip) +'.B'+ str(beam)+'"'
     if (accel == 'hl_lhc' and (ip == '1' or ip == '5')):
         bpmswl = '"BPMSQ.1L' + str(ip) +'.B'+ str(beam)+'"'
         bpmswr = '"BPMSQ.1R' + str(ip) +'.B'+ str(beam)+'"'
+
     for line in sort_linesx:
         namebpm = '"'+line[1]+'"'
         ss=line[2]
@@ -426,21 +449,18 @@ def Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpml,bpmr,selx,nameelx,psix,betx,
             s_desp.append(ss)
             bpm_desp.append(namebpm)
         
-        # TODO si esto jode, hacer acdipole 0.0 
+        # TODO: si esto jode, hacer acdipole 0.0
+        # HACK: simply make it 0 if accel == fcc_ee 
+        if accel == "fcc_ee":
+            s_acdipole = 0.0
+
         if ((ss > s_acdipole) and (namebpm in  nameelxe) and ('BPM.' in line[1]) and even_bpm(namebpm) ):
             xred_c.append(posx*0.001/sqrt(betxe[nameelxe.index(namebpm)]))
             psix_c.append(psixe[nameelxe.index(namebpm)])
             s_c.append(ss)
             bpm_c.append(namebpm)
        
-    #if (x_BPM_l == ''):
-    #    print bpml, " is no present in the horizontal plane"
-    #    #print "In comandos, change elEqError. It can be BPMSY.4L*, BPMS.2L*, or BPMSW.1L*"
-    #    exit()
-    #if (x_BPM_r == ''):
-    #    print bpmr, " is no present in the horizontal plane"
-    #    #print "In comandos, change erEqError. It can be BPMSY.4R*, BPMS.2R*, or BPMSW.1R*"
-    #    exit()
+
 
     act_nf, phase_nf =  doaccionyfase(xred_nf,psix_nf)
     if (plane == '-x'):
@@ -878,21 +898,28 @@ def get_meas_lattice(getllm_dir,beam,lattice, out_file):
             modeldata.append([sline[0],sline[1],sline[10],sline[11]])
     model.close()
     
-    # TODO quitar estos if en el fcc
-    if (beam == '1'):
-        bpm_ini = '"BPM.8L4.B1"' #first BPM after ac dipole
-        bpm_ini_orig='"BPMYB.5L2.B1"' # BPM were TbT data starts
-        s_inj =  20109.4
-    if (beam == '2'):
-        bpm_ini = '"BPM.11L4.B2"' #first BPM after ac dipole
-        bpm_ini_orig='"BPMYB.5R8.B2"' # BPM were TbT data starts
-        s_inj = 13906.0
+    # TODO: quitar estos if en el fcc
+    # HACK: if it's fcc then s_in is 0
+    if (accel == "fcc_ee"):
+        s_inj =  0.0
+        phasex_ini = 0.0 
+        phasex_ini_orig = 0.0
+    else:
+        if (beam == '1'):
+            bpm_ini = '"BPM.8L4.B1"' #first BPM after ac dipole
+            bpm_ini_orig='"BPMYB.5L2.B1"' # BPM were TbT data starts
+            s_inj =  20109.4
+        if (beam == '2'):
+            bpm_ini = '"BPM.11L4.B2"' #first BPM after ac dipole
+            bpm_ini_orig='"BPMYB.5R8.B2"' # BPM were TbT data starts
+            s_inj = 13906.0
 
+        # FIX: al parecer, estamos comparando las fases de los BPMs iniciales con los shifted. Esta bien dejarlas todas en 0?
+        modelline= [x for x in modeldata if x[0]==bpm_ini]
+        phasex_ini = float(modelline[0][2])
+        modelline= [x for x in modeldata if x[0]==bpm_ini_orig]
+        phasex_ini_orig = float(modelline[0][2])
 
-    modelline= [x for x in modeldata if x[0]==bpm_ini]
-    phasex_ini = float(modelline[0][2])
-    modelline= [x for x in modeldata if x[0]==bpm_ini_orig]
-    phasex_ini_orig = float(modelline[0][2])
     phasexdata =[]
     for line in phasex:
         sline = line.split(None)
@@ -912,11 +939,17 @@ def get_meas_lattice(getllm_dir,beam,lattice, out_file):
             phasexdata.append([sline[0],sline[2],sline[5],sline[6],phxmdl,muxmdl,muxmeas,phasex_exp])
     phasex.close()
 
+    if (accel == "fcc_ee"):
+        phasey_ini = 0.0 
+        phasey_ini_orig = 0.0
+    else:
 
-    modelline= [x for x in modeldata if x[0]==bpm_ini]
-    phasey_ini = float(modelline[0][3])
-    modelline= [x for x in modeldata if x[0]==bpm_ini_orig]
-    phasey_ini_orig = float(modelline[0][3])
+        # FIX: lo mismo ocurre aquí 
+        modelline= [x for x in modeldata if x[0]==bpm_ini]
+        phasey_ini = float(modelline[0][3])
+        modelline= [x for x in modeldata if x[0]==bpm_ini_orig]
+        phasey_ini_orig = float(modelline[0][3])
+
 
     phaseydata =[]
     for line in phasey:
@@ -1043,12 +1076,31 @@ def get_meas_lattice_omc3(getllm_dir,beam,lattice, out_file):
         bpm_ini_orig='"BPMYB.5R8.B2"' # BPM were TbT data starts
         s_inj = 13906.0
 
+    
+    # TODO: need the same as before
+    # HACK: if it's fcc then s_in is 0
+    if (accel == "fcc_ee"):
+        s_inj =  0.0
+        phasex_ini = 0.0 
+        phasex_ini_orig = 0.0
+    else:
+        if (beam == '1'):
+            bpm_ini = '"BPM.8L4.B1"' #first BPM after ac dipole
+            bpm_ini_orig='"BPMYB.5L2.B1"' # BPM were TbT data starts
+            s_inj =  20109.4
+        if (beam == '2'):
+            bpm_ini = '"BPM.11L4.B2"' #first BPM after ac dipole
+            bpm_ini_orig='"BPMYB.5R8.B2"' # BPM were TbT data starts
+            s_inj = 13906.0
 
-    modelline= [x for x in modeldata if x[0]==bpm_ini]
-    phasex_ini = float(modelline[0][2])
-    modelline= [x for x in modeldata if x[0]==bpm_ini_orig]
-    phasex_ini_orig = float(modelline[0][2])
+        # FIX: al parecer, estamos comparando las fases de los BPMs iniciales con los shifted. Esta bien dejarlas todas en 0?
+        modelline= [x for x in modeldata if x[0]==bpm_ini]
+        phasex_ini = float(modelline[0][2])
+        modelline= [x for x in modeldata if x[0]==bpm_ini_orig]
+        phasex_ini_orig = float(modelline[0][2])
+
     phasexdata =[]
+
     for line in phasex:
         sline = line.split(None)
         if not(('@' in sline) or ('$' in sline) or ('#' in sline) or ('*' in sline)):
@@ -1067,13 +1119,29 @@ def get_meas_lattice_omc3(getllm_dir,beam,lattice, out_file):
             phasexdata.append([sline[2],sline[0],sline[5],sline[6],phxmdl,muxmdl,muxmeas,phasex_exp])
     phasex.close()
 
+    # NOTE: literally same thing but for y axis
+    if (accel == "fcc_ee"):
+        s_inj =  0.0
+        phasey_ini = 0.0 
+        phasey_ini_orig = 0.0
+    else:
+        if (beam == '1'):
+            bpm_ini = '"BPM.8L4.B1"' #first BPM after ac dipole
+            bpm_ini_orig='"BPMYB.5L2.B1"' # BPM were TbT data starts
+            s_inj =  20109.4
+        if (beam == '2'):
+            bpm_ini = '"BPM.11L4.B2"' #first BPM after ac dipole
+            bpm_ini_orig='"BPMYB.5R8.B2"' # BPM were TbT data starts
+            s_inj = 13906.0
 
-    modelline= [x for x in modeldata if x[0]==bpm_ini]
-    phasey_ini = float(modelline[0][3])
-    modelline= [x for x in modeldata if x[0]==bpm_ini_orig]
-    phasey_ini_orig = float(modelline[0][3])
+        modelline= [x for x in modeldata if x[0]==bpm_ini]
+        phasey_ini = float(modelline[0][2])
+        modelline= [x for x in modeldata if x[0]==bpm_ini_orig]
+        phasey_ini_orig = float(modelline[0][2])
 
     phaseydata =[]
+
+
     for line in phasey:
         sline = line.split(None)
         if not(('@' in sline) or ('$' in sline) or ('#' in sline) or ('*' in sline)):
@@ -1499,16 +1567,20 @@ def dphi_rad(phim,phit):
     El arco es lo utilizado para calcular las acciones y las fases 
     (El promedio que toca modificar)
 """
-def get_arc_values(ip,parameter):
-    ip1 = ['14200', '16800', '17500', '20000']
-    ip2 = ['17500', '19700', '21000', '23000']
-    ip5 = ['1000', '3200', '4200', '6500']
-    ip8 = ['11000', '13400', '14100', '16600']
-    par_l=['left_arc_start','left_arc_end','right_arc_start','right_arc_end']
-    if (ip == '1'): value = ip1[par_l.index(parameter)]
-    if (ip == '2'): value = ip2[par_l.index(parameter)]
-    if (ip == '5'): value = ip5[par_l.index(parameter)]
-    if (ip == '8'): value = ip8[par_l.index(parameter)]
+def get_arc_values(ip,parameter, accel = "lhc"):
+    if accel != "fcc_ee":
+        ip1 = ['14200', '16800', '17500', '20000']
+        ip2 = ['17500', '19700', '21000', '23000']
+        ip5 = ['1000', '3200', '4200', '6500']
+        ip8 = ['11000', '13400', '14100', '16600']
+        par_l=['left_arc_start','left_arc_end','right_arc_start','right_arc_end']
+        if (ip == '1'): value = ip1[par_l.index(parameter)]
+        if (ip == '2'): value = ip2[par_l.index(parameter)]
+        if (ip == '5'): value = ip5[par_l.index(parameter)]
+        if (ip == '8'): value = ip8[par_l.index(parameter)]
+    else:
+        # TODO: add these arc lenghts for the fcc
+
     return value
 ###########################################################################################################################################################################
 
@@ -1672,7 +1744,7 @@ parser.add_argument(
 parser.add_argument(
    "-a", "--accel",
     help="accelerator name",
-    choices=['lhc','hl_lhc'],
+    choices=['lhc','hl_lhc', "fcc_ee"],
     dest="accel",
     default='lhc'
 )
@@ -1729,14 +1801,14 @@ beam=args.beam
 ip= args.ip
 
 
-# TODO Dan los valores de inicio y finalización de los arcos
-if (args.left_arc_start == None):left_arc_start = get_arc_values(ip,'left_arc_start')
+# FIX: REVISAR LOS VALORES DE LOS ARCOS EN EL FCC Y PONERLOS EN LA FUNCIÓN GET_ARC_VALUES
+if (args.left_arc_start == None):left_arc_start = get_arc_values(ip,'left_arc_start', accel)
 else:left_arc_start = args.left_arc_start
-if (args.left_arc_end == None): left_arc_end = get_arc_values(ip,'left_arc_end')
+if (args.left_arc_end == None): left_arc_end = get_arc_values(ip,'left_arc_end', accel)
 else:left_arc_end = args.left_arc_end     
-if (args.right_arc_start == None): right_arc_start = get_arc_values(ip,'right_arc_start')
+if (args.right_arc_start == None): right_arc_start = get_arc_values(ip,'right_arc_start', accel)
 else: right_arc_start = args.right_arc_start
-if (args.right_arc_end == None): right_arc_end = get_arc_values(ip,'right_arc_end')
+if (args.right_arc_end == None): right_arc_end = get_arc_values(ip,'right_arc_end', accel)
 else: right_arc_end = args.right_arc_end
 
 
@@ -1777,9 +1849,15 @@ if (accel == 'lhc'):
 ####################################################################################################################
 call(['mkdir','-p',apj_dir])
 
-    
-if (beam == '1'): s_acdipole = 158
-if (beam == '2'): s_acdipole = 287
+
+# TODO: ac_dipole is simply 0 for fcc 
+# HACK: been there done that
+
+if accel == "fcc_ee":
+    s_acdipole = 0.0 
+else:
+    if (beam == '1'): s_acdipole = 158
+    if (beam == '2'): s_acdipole = 287
     
 
 ########################## OUTPUT FILES  #########################################
@@ -1832,48 +1910,51 @@ conventional_gpl_file = open (apj_dir + 'gConventional.gpl' ,'w')
 ####also see output files of JyP_trip function
 ##################################################################################
 
-# TODO Para integrales: son cuadrupolos skew, no se van a utilizar: IGNORAR
-qslint='MQSX.3L'+str(ip)
-qsrint='MQSX.3R'+str(ip)
+# TODO: Para integrales: son cuadrupolos skew, no se van a utilizar: IGNORAR
+# HACK: simply ignore if fcc
 
-if (args.accel == 'lhc'):
-    lipl1 = 21.579
-    lipr1 = 21.564
-    lipl5 = 21.564
-    lipr5 = 21.564
-if (args.accel == 'hl_lhc'):
-    lipl1 = 21.853
-    lipr1 = 21.853 
-    lipl5 = 21.853
-    lipr5 = 21.853    
+if accel != "fcc_ee":
+    qslint='MQSX.3L'+str(ip)
+    qsrint='MQSX.3R'+str(ip)
 
-
-lipl2 = 21.595
-lipr2 = 21.595
-
-lipl8 = 21.595
-lipr8 = 21.595
+    if (args.accel == 'lhc'):
+        lipl1 = 21.579
+        lipr1 = 21.564
+        lipl5 = 21.564
+        lipr5 = 21.564
+    if (args.accel == 'hl_lhc'):
+        lipl1 = 21.853
+        lipr1 = 21.853 
+        lipl5 = 21.853
+        lipr5 = 21.853    
 
 
+    lipl2 = 21.595
+    lipr2 = 21.595
 
-if (ip == '1'):
-    lipl = lipl1
-    lipr = lipr1
-if (ip == '5'):
-    lipl = lipl5
-    lipr = lipr5
-if (ip == '2'):
-    lipl = lipl2
-    lipr = lipr2
-if (ip == '8'):
-    lipl = lipl8
-    lipr = lipr8   
+    lipl8 = 21.595
+    lipr8 = 21.595
 
-# TODO también hay que ignorar al momento de leer la integral
-qal_nf = 'Q2L' + str(ip) 
-qbl_nf = 'Q3L' + str(ip)
-qar_nf = 'Q2R' + str(ip)
-qbr_nf = 'Q3R' + str(ip)
+
+
+    if (ip == '1'):
+        lipl = lipl1
+        lipr = lipr1
+    if (ip == '5'):
+        lipl = lipl5
+        lipr = lipr5
+    if (ip == '2'):
+        lipl = lipl2
+        lipr = lipr2
+    if (ip == '8'):
+        lipl = lipl8
+        lipr = lipr8   
+
+    # WARN: could be used later on for something, but not sure
+    qal_nf = 'Q2L' + str(ip) 
+    qbl_nf = 'Q3L' + str(ip)
+    qar_nf = 'Q2R' + str(ip)
+    qbr_nf = 'Q3R' + str(ip)
 
 
 
@@ -1882,27 +1963,34 @@ nameelx,selx,betx,psix,alfx=leer_beta_mu3(latticef,'-x')
 nameely,sely,bety,psiy,alfy=leer_beta_mu3(latticef,'-y')
 
 
-# TODO if lhc or hl_lhc then just make ISerrlattice, Isbpmlr true, Isbpms true; everything else is false
-Is_ip_ap_kmod, Iskmod ,  Iserrlattice, Isbpms, Isbpmlr ,trying_2run4quads = inp_conditions(args,nameelx,nameely,'nominal', ip, beam,accel)
+# TODO: if lhc or hl_lhc then just make ISerrlattice, Isbpmlr true, Isbpms true; everything else is false
+# HACK: did exactly that 
 
-##############################handling measured lattice input#############################################
+if accel == "fcc_ee":
+    Is_ip_ap_kmod, Iskmod ,  Iserrlattice, Isbpms, Isbpmlr ,trying_2run4quads = False, False, True, True, True, False
+else:
+    Is_ip_ap_kmod, Iskmod ,  Iserrlattice, Isbpms, Isbpmlr ,trying_2run4quads = inp_conditions(args,nameelx,nameely,'nominal', ip, beam,accel)
 
-# TODO todo esto no se va a activar
-if ( getllm_dir != None):
-    if (Iserrlattice):
-        lattice_errf = apj_dir + 'lattice_err.asc'
-        get_meas_lattice(getllm_dir,beam,latticef, lattice_errf)
+    ##############################handling measured lattice input#############################################
 
-if ( getllm_dir_omc3 != None):
-    if (Iserrlattice):
-        lattice_errf = apj_dir + 'lattice_err.asc'
-        get_meas_lattice_omc3(getllm_dir_omc3,beam,latticef, lattice_errf)
+    # TODO: todo esto no se va a activar
+    # HACK: put inside the lhc if block
+    if ( getllm_dir != None):
+        if (Iserrlattice):
+            lattice_errf = apj_dir + 'lattice_err.asc'
+            get_meas_lattice(getllm_dir,beam,latticef, lattice_errf)
+
+    if ( getllm_dir_omc3 != None):
+        if (Iserrlattice):
+            lattice_errf = apj_dir + 'lattice_err.asc'
+            get_meas_lattice_omc3(getllm_dir_omc3,beam,latticef, lattice_errf)
 
 
-####################################################################################################################
+    ####################################################################################################################
 
 
-# TODO lo hace
+# TODO: lo hace
+# HACK: just kept it outside the blocks
 if (Iserrlattice):
 #if( args.getllm_dir != None or args.err_lattice_file != None):
     nameelxe,selxe,betxe,psixe,alfxe=leer_beta_mu3(lattice_errf,'-x')
@@ -1931,7 +2019,12 @@ if(Iskmod):
 else:
     wx = 0
     wy = 0
-    ip_name = '"IP' + ip + '"'
+    # TODO: IP names change between lhc and fcc Files 
+    # HACK: changed the names to the proper ones
+    if accel == "fcc_ee": 
+        ip_name = '"IP.' + ip + '"'
+    else:
+        ip_name = '"IP' + ip + '"'
     bwx =bety[nameely.index(ip_name)]
     bwy =bety[nameely.index(ip_name)]
 
@@ -1956,8 +2049,9 @@ else:
 #print  "kmod","BEAM", "ip", "wx", "bwx", "wy", "bwy"
 #print "kmod" ,beam,ip, wx, bwx, wy, bwy
 if(args.ip_phase_bpm != None):bpm_phase= '\"' + args.ip_phase_bpm + '\"'
-  
-# TODO lo hace
+ 
+
+# TODO: check if the lines with the #LHC comment mess with fcc 
 if (Isbpmlr):
     bpml= '\"' + bpml_nf + '\"'
     #####lattice parameter X plane left side############################################
@@ -2000,8 +2094,6 @@ if (Isbpmlr):
     psiy_BPM_r=psiy[nameely.index(bpmr)] # LHC
 
 
-#model
-#tbts
 
     
 bpm_max_ns='"'+bpm_max+'"'
@@ -2011,7 +2103,7 @@ if (bpm_max_ns not in nameelx or bpm_max_ns not in nameely):
     exit()
 
 
-# TODO esto es si no aparece el BPM en la lattice con error
+# WARN: check it does not bug
 #####lattice parameter X plane right side############################################
 betax_error=betx[nameelx.index(bpm_max_ns)]
 Betxeq = betx[nameelx.index(bpm_max_ns)]
@@ -2043,121 +2135,124 @@ if(trying_2run4quads):
 
 
 
+# TODO: here is where the corrections are made
+# HACK: so far, just call this block when we are outside of fcc
 ##########################################INTEGRALS##################################
-integrals = leer_filedatos_v01(intf)
 
-#variables for corrector integrals (left triplet)
-IntBetxQal = 1
-IntBetyQal = 0
-IntBetxQbl = 0
-IntBetyQbl = 0
-Intbetxbety_l = 0
+if accel != "fcc_ee":
+    integrals = leer_filedatos_v01(intf)
 
-PhixQal = 0
-PhiyQal = 0
-PhixQbl = 0
-PhiyQbl = 0
+    #variables for corrector integrals (left triplet)
+    IntBetxQal = 1
+    IntBetyQal = 0
+    IntBetxQbl = 0
+    IntBetyQbl = 0
+    Intbetxbety_l = 0
 
-
-#variables for corrector integrals (right triplet)
-IntBetxQar = 0
-IntBetyQar = 0
-IntBetxQbr = 0
-IntBetyQbr = 0
-Intbetxbety_r = 0
-
-PhixQar = 0
-PhiyQar = 0
-PhixQbr = 0
-PhiyQbr = 0
-
-IntBetxQ1L = 0
-IntBetyQ1L = 0
-IntBetxQ1R = 0
-IntBetyQ1R = 0
+    PhixQal = 0
+    PhiyQal = 0
+    PhixQbl = 0
+    PhiyQbl = 0
 
 
-# TODO AQUÍ ES DONDE HAY QUE HACER LOS CAMBIOS, realizar todos los cambios 
-# esto es para las correcciones
-for j in integrals:
-      #Integrals of Quads for correction (left triplet)
-    if (qal_nf in j ):
-      IntBetxQal= IntBetxQal  + float(j[1])
-      IntBetyQal= IntBetyQal  + float(j[2])
-      PhixQal= PhixQal  + float(j[4])
-      PhiyQal= PhiyQal  + float(j[5])            
-    if (qbl_nf in j ):
-      IntBetxQbl= IntBetxQbl  + float(j[1])
-      IntBetyQbl=  IntBetyQbl + float(j[2])
-      PhixQbl= PhixQbl  + float(j[4])
-      PhiyQbl=  PhiyQbl + float(j[5])       
+    #variables for corrector integrals (right triplet)
+    IntBetxQar = 0
+    IntBetyQar = 0
+    IntBetxQbr = 0
+    IntBetyQbr = 0
+    Intbetxbety_r = 0
 
-    if (qslint in j ):
-      Intbetxbety_l= Intbetxbety_l  + float(j[1])
+    PhixQar = 0
+    PhiyQar = 0
+    PhixQbr = 0
+    PhiyQbr = 0
 
-      #integrals of Quads for correction (right triplet)
-    if (qar_nf in j ):
-      IntBetxQar= IntBetxQar  + float(j[1])
-      IntBetyQar= IntBetyQar  + float(j[2])
-      PhixQar= PhixQar  + float(j[4])
-      PhiyQar= PhiyQar  + float(j[5])         
-    if (qbr_nf in j ):
-      IntBetxQbr= IntBetxQbr  + float(j[1])
-      IntBetyQbr= IntBetyQbr  + float(j[2])
-      PhixQbr= PhixQbr  + float(j[4])
-      PhiyQbr= PhiyQbr  + float(j[5])         
-    if (qsrint in j ):
-      Intbetxbety_r= Intbetxbety_r  + float(j[1])
-    if  ('Q1L'+ip in j):
-        IntBetxQ1L=float(j[1])
-        IntBetyQ1L=float(j[2])
-        #print IntBetxQ1L, IntBetyQ1L
-        if (args.accel == 'hl_lhc' and (ip =='1' or ip == '5')):
-                IntBetxQ1L=IntBetxQ1L + float(j[1])
-                IntBetyQ1L=IntBetyQ1L + float(j[2])
-    if  ('Q1R'+ip in j):
-        IntBetxQ1R=float(j[1])
-        IntBetyQ1R=float(j[2])
-        if (args.accel == 'hl_lhc' and (ip =='1' or ip == '5')):
-                IntBetxQ1R=IntBetxQ1R + float(j[1])
-                IntBetyQ1R=IntBetyQ1R + float(j[2])
- 
-      #Integrals no common region (only IR1 )
-    if ('Q4L1' in j):
-        IntBetxQ4L=float(j[1])
-        IntBetyQ4L=float(j[2])
-        PhixQ4L=float(j[4])
-        PhiyQ4L=float(j[5])
-    if ('Q5L1' in j):
-        IntBetxQ5L=float(j[1])
-        IntBetyQ5L=float(j[2])
-        PhixQ5L=float(j[4])
-        PhiyQ5L=float(j[5])
-    if ('Q6L1' in j):
-        IntBetxQ6L=float(j[1])
-        IntBetyQ6L=float(j[2])
-        PhixQ6L=float(j[4])
-        PhiyQ6L=float(j[5])
+    IntBetxQ1L = 0
+    IntBetyQ1L = 0
+    IntBetxQ1R = 0
+    IntBetyQ1R = 0
 
-    if ('Q4R1' in j):
-        IntBetxQ4R=float(j[1])
-        IntBetyQ4R=float(j[2])
-        PhixQ4R=float(j[4])
-        PhiyQ4R=float(j[5])
-    if ('Q5R1' in j):
-        IntBetxQ5R=float(j[1])
-        IntBetyQ5R=float(j[2])
-        PhixQ5R=float(j[4])
-        PhiyQ5R=float(j[5])
-    if ('Q6R1' in j):
-        IntBetxQ6R=float(j[1])
-        IntBetyQ6R=float(j[2])
-        PhixQ6R=float(j[4])
-        PhiyQ6R=float(j[5])
-PhixQal = PhixQal/2
-PhiyQal = PhiyQal/2
-PhixQar = PhixQar/2
-PhiyQar = PhiyQar/2
+
+    # esto es para las correcciones
+    for j in integrals:
+          #Integrals of Quads for correction (left triplet)
+        if (qal_nf in j ):
+          IntBetxQal= IntBetxQal  + float(j[1])
+          IntBetyQal= IntBetyQal  + float(j[2])
+          PhixQal= PhixQal  + float(j[4])
+          PhiyQal= PhiyQal  + float(j[5])            
+        if (qbl_nf in j ):
+          IntBetxQbl= IntBetxQbl  + float(j[1])
+          IntBetyQbl=  IntBetyQbl + float(j[2])
+          PhixQbl= PhixQbl  + float(j[4])
+          PhiyQbl=  PhiyQbl + float(j[5])       
+
+        if (qslint in j ):
+          Intbetxbety_l= Intbetxbety_l  + float(j[1])
+
+          #integrals of Quads for correction (right triplet)
+        if (qar_nf in j ):
+          IntBetxQar= IntBetxQar  + float(j[1])
+          IntBetyQar= IntBetyQar  + float(j[2])
+          PhixQar= PhixQar  + float(j[4])
+          PhiyQar= PhiyQar  + float(j[5])         
+        if (qbr_nf in j ):
+          IntBetxQbr= IntBetxQbr  + float(j[1])
+          IntBetyQbr= IntBetyQbr  + float(j[2])
+          PhixQbr= PhixQbr  + float(j[4])
+          PhiyQbr= PhiyQbr  + float(j[5])         
+        if (qsrint in j ):
+          Intbetxbety_r= Intbetxbety_r  + float(j[1])
+        if  ('Q1L'+ip in j):
+            IntBetxQ1L=float(j[1])
+            IntBetyQ1L=float(j[2])
+            #print IntBetxQ1L, IntBetyQ1L
+            if (args.accel == 'hl_lhc' and (ip =='1' or ip == '5')):
+                    IntBetxQ1L=IntBetxQ1L + float(j[1])
+                    IntBetyQ1L=IntBetyQ1L + float(j[2])
+        if  ('Q1R'+ip in j):
+            IntBetxQ1R=float(j[1])
+            IntBetyQ1R=float(j[2])
+            if (args.accel == 'hl_lhc' and (ip =='1' or ip == '5')):
+                    IntBetxQ1R=IntBetxQ1R + float(j[1])
+                    IntBetyQ1R=IntBetyQ1R + float(j[2])
+     
+          #Integrals no common region (only IR1 )
+        if ('Q4L1' in j):
+            IntBetxQ4L=float(j[1])
+            IntBetyQ4L=float(j[2])
+            PhixQ4L=float(j[4])
+            PhiyQ4L=float(j[5])
+        if ('Q5L1' in j):
+            IntBetxQ5L=float(j[1])
+            IntBetyQ5L=float(j[2])
+            PhixQ5L=float(j[4])
+            PhiyQ5L=float(j[5])
+        if ('Q6L1' in j):
+            IntBetxQ6L=float(j[1])
+            IntBetyQ6L=float(j[2])
+            PhixQ6L=float(j[4])
+            PhiyQ6L=float(j[5])
+
+        if ('Q4R1' in j):
+            IntBetxQ4R=float(j[1])
+            IntBetyQ4R=float(j[2])
+            PhixQ4R=float(j[4])
+            PhiyQ4R=float(j[5])
+        if ('Q5R1' in j):
+            IntBetxQ5R=float(j[1])
+            IntBetyQ5R=float(j[2])
+            PhixQ5R=float(j[4])
+            PhiyQ5R=float(j[5])
+        if ('Q6R1' in j):
+            IntBetxQ6R=float(j[1])
+            IntBetyQ6R=float(j[2])
+            PhixQ6R=float(j[4])
+            PhiyQ6R=float(j[5])
+    PhixQal = PhixQal/2
+    PhiyQal = PhiyQal/2
+    PhixQar = PhixQar/2
+    PhiyQar = PhiyQar/2
       
 
 
@@ -2169,16 +2264,9 @@ if (args.shifted_bpmdata != None): tbt_files = args.shifted_bpmdata
 if (args.aver_bpmdata != None): tbt_files = args.aver_bpmdata
 
 
-    
-    
-
-
 tbt_file = tbt_files.split(',')
 
 ######put code associated to -fa flag  here   
-
-        
-
 
 print("\n")
 print("\n")
@@ -2234,7 +2322,8 @@ for tbt_i in tbt_file:
         print("\n")
         #call(['rm', '-f', tbt_shifted])
 
-    # TODO esto es lo que me interesa PARAR BOLAS
+    # TODO: this is the block that we call to perform the shifted tbt
+    # HACK: nothing to change here so far
     if (args.shifted_bpmdata != None and not args.force_averages):
         datatype = "shifted_bpmdata"    
         orb_apj_dir, name_tbt = create_tbt_analysis_dir(datatype,tbt_i, apj_dir)
@@ -2311,13 +2400,12 @@ for tbt_i in tbt_file:
          bpms_avery.append(jj[1])
     
     
-    # TODO desactivar si jode
+    # TODO: desactivar si jode
+    # WARN: check it does bug
     if ((bpm_max not in bpms_averx) or (bpm_max not in bpms_avery)):
         print(bpm_max , 'is not in',name_orbitmax,'. Position data ( in either x or/and y plane) for that BPM might not be available. Instead, Re-run the program and use one of the following BPMs',possibleBPMs(bpm_max,"bpm_for_avermax",ip,beam,accel), 'for "bpm_for_avermax (-ab)"')
         exit()
     if (Isbpms):
-        
-        
         if ((bpml_nf not in bpms_averx) or (bpml_nf not in bpms_avery)):
             print(bpml_nf , 'is not in',name_orbitmax,'. Position data ( in either x or/and y plane) for that BPM might not be available. Instead, Re-run the program and use one of the following BPMs',possibleBPMs(bpml_nf,"left_kick_bpm",ip,beam,accel), 'for "left_kick_bpm (-lb)"')
             exit()
@@ -2373,16 +2461,24 @@ for tbt_i in tbt_file:
         betye_i = bety
     
 
-    # Esto hace TODO 
+    # Esto hace TODO: check actually that everything works 
+    # WARN: not sure what I'd have to change here
     APJact_nflx,APJphase_nflx,act_nflx,phase_nflx,APJactlx,APJphaselx,actlx,phaselx,averactant, averphaseant, act_trip_bpmsw, phase_trip_bpmsw, averactdesp, averphasedesp, x_BPM_l, x_BPM_r =Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpm1,bpm2,selx,nameelx,psix,betx,sL_begin,sR_end,nsigma,selxe_i,nameelxe_i,psixe_i,betxe_i,wx,bwx,s_acdipole,plane,beam,bpm_phase_i,ip, 'bpmsw', accel)
     
     icxf = open(orb_apj_dir+'icx.madx','w')
-    if (beam == '1'):
-        btx = betx[nameelx.index('"BPM.8L4.B1"')]
-        alx = alfx[nameelx.index('"BPM.8L4.B1"')]
-    if (beam == '2'):
-        btx = betx[nameelx.index('"BPM.11L4.B2"')]
-        alx = alfx[nameelx.index('"BPM.11L4.B2"')]
+
+    # FIX: which values should I put here
+    # HACK: will use the IP values next to the QP for not
+    if accel == "fcc_ee":
+        btx = betx[nameelx.index(f'"BPMSW.1L{ip}.B1"')]
+        alx = alfx[nameelx.index(f'"BPMSW.1L{ip}.B1"')]
+    else:
+        if (beam == '1'):
+            btx = betx[nameelx.index('"BPM.8L4.B1"')]
+            alx = alfx[nameelx.index('"BPM.8L4.B1"')]
+        if (beam == '2'):
+            btx = betx[nameelx.index('"BPM.11L4.B2"')]
+            alx = alfx[nameelx.index('"BPM.11L4.B2"')]
         
     zx=-sqrt(2*averactant*btx)*sin(averphaseant)
     zpx=sqrt(2*averactant/btx) *(alx*sin(averphaseant)+cos(averphaseant) )
@@ -2522,14 +2618,21 @@ for tbt_i in tbt_file:
 
     #print "vertical"
     APJact_nfly,APJphase_nfly,act_nfly,phase_nfly,APJactly,APJphasely,actly,phasely,averactant, averphaseant, act_trip_bpmsw, phase_trip_bpmsw, averactdesp, averphasedesp, y_BPM_l, y_BPM_r =Arc_Trip_APs(sdds_col, sort_linesy,diforby,bpm1,bpm2,sely,nameely,psiy,bety,sL_begin,sR_end,nsigma,selye_i,nameelye_i,psiye_i,betye_i,wy,bwy,s_acdipole,plane,beam,bpm_phase_i,ip, 'bpmsw', accel)
+
     icyf = open(orb_apj_dir+'icy.madx','w')
-    if (beam == '1'):
-        bty = bety[nameely.index('"BPM.8L4.B1"')]
-        aly = alfy[nameely.index('"BPM.8L4.B1"')]
-    if (beam == '2'):
-        bty = bety[nameely.index('"BPM.11L4.B2"')]
-        aly = alfy[nameely.index('"BPM.11L4.B2"')]
-    zy=-sqrt(2*averactant*bty)*sin(averphaseant)
+    # FIX: which values should I put here
+    # HACK: will use the IP values next to the QP for not
+    if accel == "fcc_ee":
+        bty = bety[nameely.index(f'"BPMSW.1L{ip}.B1"')]
+        aly = alfy[nameely.index(f'"BPMSW.1L{ip}.B1"')]
+    else:
+        if (beam == '1'):
+            bty = bety[nameely.index('"BPM.8L4.B1"')]
+            aly = alfx[nameely.index('"BPM.8L4.B1"')]
+        if (beam == '2'):
+            bty = bety[nameely.index('"BPM.11L4.B2"')]
+            aly = alfy[nameely.index('"BPM.11L4.B2"')]
+
     zpy=sqrt(2*averactant/bty) *(aly*sin(averphaseant)+cos(averphaseant) )
     print('bty = ', bty, ';', file=icyf)
     print('aly = ', aly, ';', file=icyf)
@@ -2681,41 +2784,45 @@ for tbt_i in tbt_file:
     #print corrq2r_name , corrq2r
     #print corrq3r_name , corrq3r
 
-# TODO esto no nos interesa en el fcc por el momento
-print("CORRECTIONS FOR BEAM", beam,": \n")
-errq2l_ip = 'errq2l' +ip+' = '
-errq2r_ip = 'errq2r' +ip+' = '
-errq3l_ip = 'errq3l' +ip+' = '
-errq3r_ip = 'errq3r' +ip+' = '
-
-if (Is_ip_ap_kmod):
-    aa_4corrsl_array = np.array(aa_4corrsl)
-    bb_4corrsl_array = np.array(bb_4corrsl)
-    aa_4corrsr_array = np.array(aa_4corrsr)
-    bb_4corrsr_array = np.array(bb_4corrsr)
-    corrq2l_beam_4corrs, corrq3l_beam_4corrs =  np.linalg.lstsq(aa_4corrsl_array,bb_4corrsl_array)[0]
-    corrq2r_beam_4corrs, corrq3r_beam_4corrs =  np.linalg.lstsq(aa_4corrsr_array,bb_4corrsr_array)[0]
-    print("corrections with 4 quads per IR")
-    print(corrq2l_name, corrq2l_beam_4corrs)
-    print(corrq3l_name , corrq3l_beam_4corrs)
-    print(corrq2r_name , corrq2r_beam_4corrs)
-    print(corrq3r_name , corrq3r_beam_4corrs)
-    print(errq2l_ip ,-float(corrq2l_beam_4corrs), " ;", file=ir_4err)
-    print(errq3l_ip  ,-float(corrq3l_beam_4corrs), " ;", file=ir_4err)
-    print(errq2r_ip ,-float(corrq2r_beam_4corrs), " ;", file=ir_4err)
-    print(errq3r_ip  ,-float(corrq3r_beam_4corrs), " ;", file=ir_4err)
-
-print("\n")
-aa_2corrs_array = np.array(aa_2corrs)
-bb_2corrs_array = np.array(bb_2corrs)
-corrq2l_beam_2corrs, corrq2r_beam_2corrs =  np.linalg.lstsq(aa_2corrs_array,bb_2corrs_array)[0]
-print("corrections with 2 quads per IR")
-print(corrq2l_name, corrq2l_beam_2corrs)
-print(corrq2r_name , corrq2r_beam_2corrs)
+# TODO: esto no nos interesa en el fcc por el momento
+# HACK: ignore if fcc
 
 
-print(errq2l_ip ,-float(corrq2l_beam_2corrs), " ;", file=ir_2err)
-print(errq2r_ip  ,-float(corrq2r_beam_2corrs), " ;", file=ir_2err)
+if accel != "fcc_ee":
+    print("CORRECTIONS FOR BEAM", beam,": \n")
+    errq2l_ip = 'errq2l' +ip+' = '
+    errq2r_ip = 'errq2r' +ip+' = '
+    errq3l_ip = 'errq3l' +ip+' = '
+    errq3r_ip = 'errq3r' +ip+' = '
+
+    if (Is_ip_ap_kmod):
+        aa_4corrsl_array = np.array(aa_4corrsl)
+        bb_4corrsl_array = np.array(bb_4corrsl)
+        aa_4corrsr_array = np.array(aa_4corrsr)
+        bb_4corrsr_array = np.array(bb_4corrsr)
+        corrq2l_beam_4corrs, corrq3l_beam_4corrs =  np.linalg.lstsq(aa_4corrsl_array,bb_4corrsl_array)[0]
+        corrq2r_beam_4corrs, corrq3r_beam_4corrs =  np.linalg.lstsq(aa_4corrsr_array,bb_4corrsr_array)[0]
+        print("corrections with 4 quads per IR")
+        print(corrq2l_name, corrq2l_beam_4corrs)
+        print(corrq3l_name , corrq3l_beam_4corrs)
+        print(corrq2r_name , corrq2r_beam_4corrs)
+        print(corrq3r_name , corrq3r_beam_4corrs)
+        print(errq2l_ip ,-float(corrq2l_beam_4corrs), " ;", file=ir_4err)
+        print(errq3l_ip  ,-float(corrq3l_beam_4corrs), " ;", file=ir_4err)
+        print(errq2r_ip ,-float(corrq2r_beam_4corrs), " ;", file=ir_4err)
+        print(errq3r_ip  ,-float(corrq3r_beam_4corrs), " ;", file=ir_4err)
+
+    print("\n")
+    aa_2corrs_array = np.array(aa_2corrs)
+    bb_2corrs_array = np.array(bb_2corrs)
+    corrq2l_beam_2corrs, corrq2r_beam_2corrs =  np.linalg.lstsq(aa_2corrs_array,bb_2corrs_array)[0]
+    print("corrections with 2 quads per IR")
+    print(corrq2l_name, corrq2l_beam_2corrs)
+    print(corrq2r_name , corrq2r_beam_2corrs)
+
+
+    print(errq2l_ip ,-float(corrq2l_beam_2corrs), " ;", file=ir_2err)
+    print(errq2r_ip  ,-float(corrq2r_beam_2corrs), " ;", file=ir_2err)
 
 #apj_gpl_file = open(apj_dir + 'gAPJ.gpl','w')
 #conventional_gpl_file = open (apj_dir + 'gConventional.gpl' ,'w')
