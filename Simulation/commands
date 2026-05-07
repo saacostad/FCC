@@ -13,10 +13,10 @@ echo $home_dir
 
 
 # ####################################################TBT Simulations for both beams IR1 (arbitrary number of turns) ######################################################################
-# python  "$home_dir/tbt_simulator.py"   -b=1 -ip=2  -ef="$home_dir/IR_errors.madx"    -md="$home_dir/fcc_ee_test_simulation/"  -od="$home_dir/fcc_ee_test_simulation/tbt/" -tw -n=100 -mx="$madx_program" --accel="fcc_ee"
+# python  "$home_dir/tbt_simulator.py"   -b=1 -ip=5  -ef="$home_dir/IR_errors.madx"    -md="$home_dir/fcc_ee_test_simulation/"  -od="$home_dir/fcc_ee_test_simulation/tbt/" -tw -n=100 -mx="$madx_program" --accel="fcc_ee"
 #
 
-python  "$home_dir/ActionPhaseJump.py" -b=1 --accel="fcc_ee" -ip=2 -ab=BPMSW.1L2.B1 -pb=BPMSW.1L2.B1 -lb=BPMSW.1L2.B1 -rb=BPMSW.1R2.B1  -sf="$home_dir/fcc_ee_test_simulation/tbt/sim_tbt/sim_tbt.sdds.new"   -md="$home_dir/fcc_ee_test_simulation/"    -ml="$home_dir/fcc_ee_test_simulation/tbt/lattice_err.asc"  -sk="$home_dir/fcc_ee_test_simulation/tbt_simu/ip.results"    -od="$home_dir/fcc_ee_test_simulation/tbt_simu/" 
+python  "$home_dir/ActionPhaseJump.py" -b=1 --accel="fcc_ee" -ip=5 -ab=BPMSW.1L2.B1 -pb=BPMSW.1L2.B1 -lb=BPMSW.1L2.B1 -rb=BPMSW.1R2.B1  -sf="$home_dir/fcc_ee_test_simulation/tbt/sim_tbt/sim_tbt.sdds.new"   -md="$home_dir/fcc_ee_test_simulation/"    -ml="$home_dir/fcc_ee_test_simulation/tbt/lattice_err.asc"  -sk="$home_dir/fcc_ee_test_simulation/tbt_simu/ip.results"    -od="$home_dir/fcc_ee_test_simulation/tbt_simu" -p
 
 
 # python  $home_dir/apj/tbt_simulator.py   -b=2 -ip=1  -ef=$home_dir/apj/lhc/IR1_errors.madx     -md=$home_dir/IR1_simu/b2_optic_files/  -od=$home_dir/IR1_simu/b2_tbt_simu/ -tw -n=100 -mx=$madx_program

@@ -13,13 +13,19 @@ from scipy.optimize import curve_fit
 from tools.utils_ActPhase10 import *
 import random
 from random import gauss
-#from Utilities import outliers
-import tools.outliers
+# from Utilities import outliers
+import tools.outliers as outliers
 from subprocess import call
 from subprocess import Popen
 import argparse
 import datetime
 #-----------------------------------------------------------------------
+
+
+# BIG TODO 
+# TODO: por alguna extraña razón, el avermax no me está guardando todos los BPMs. Esto es un error en el MT2avermax, posiblemente 
+# en el diforb a sorted_lines_readz puesto que es aquí en donde se guarda la lista con la cual, finalmente, creamos el avermax.
+
 
 """
 TODO: cambiar los ab rb lb etc etc por los BPMs que puse alrededor de los BPMs        
@@ -43,6 +49,7 @@ print("ActionPhaseJump Version", version)
 ####################################################################
 ####################Function definitions ##########################
 def traj_data(orbitfile,nameel,eje):
+
     allinesx =[]
     if (eje == '-x'):
         plane = '0'
@@ -59,10 +66,17 @@ def traj_data(orbitfile,nameel,eje):
         else:
             name = '"'+cutline[1]+'"'
             if name in nameel:
+                print("ENTERED 1")
+                # print(type(cutline[0]))
                 if (cutline[0] == plane):
+                    print("ENTERED 2")
                     locationx = float(cutline.pop(2)) #change axial position to float
                     cutline.insert(2,locationx)
                     allinesx.append(cutline)
+
+    # print("allinesx")
+    # print(allinesx[:5])
+    # input()
 
     ####Sort the orbit data using axial position as index
     sort_linesx = sorted(allinesx, key=lambda pos: pos[2])
@@ -88,7 +102,9 @@ def traj_data(orbitfile,nameel,eje):
     diforbx =[]
     bpmdiforbx =[]
 
-
+    # print("sort_linesx")
+    # print(sort_linesx[:5])
+    # input()
     for j in range(len(sort_linesx)):
         for i in range(len(sort_linesx[j])-3):
             #print len(sort_linesx[j]), i, float(sort_linesx[j][i+3]), averx[j]
@@ -99,6 +115,9 @@ def traj_data(orbitfile,nameel,eje):
         bpmdiforbx =[]
 
     orbitfile.close()
+    # print("diforbx generated:")
+    # print(diforbx[:5])
+    # input()
     return diforbx,  sort_linesx
 
 
@@ -236,7 +255,9 @@ def filter1a(s_list0, values_list0,bpm_list0,plane):
     s_list1 =[]
 
     for i in bpm_list0:
-        if ('BPM.' in i):
+        # TODO: this was not considering our fcc bpms 
+        # HACK: add it too
+        if ('BPM.' in i) or ('Q' in i):
             bpm_list1.append(i)
             values_list1.append(values_list0[bpm_list0.index(i)])
             s_list1.append(s_list0[bpm_list0.index(i)])
@@ -394,15 +415,38 @@ def Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpml,bpmr,selx,nameelx,psix,betx,
 
     # TODO: Modificar BPM name y longitud del acelerador
     # NOTE: no real need as fcc keeps this accel's name
-    bpmswl = '"BPMSW.1L' + str(ip) +'.B'+ str(beam)+'"'
-    bpmswr = '"BPMSW.1R' + str(ip) +'.B'+ str(beam)+'"'
-    if (accel == 'hl_lhc' and (ip == '1' or ip == '5')):
+    if (accel == "lhc"):
+        bpmswl = '"BPMSW.1L' + str(ip) +'.B'+ str(beam)+'"'
+        bpmswr = '"BPMSW.1R' + str(ip) +'.B'+ str(beam)+'"'
+    elif (accel == 'hl_lhc' and (ip == '1' or ip == '5')):
         bpmswl = '"BPMSQ.1L' + str(ip) +'.B'+ str(beam)+'"'
         bpmswr = '"BPMSQ.1R' + str(ip) +'.B'+ str(beam)+'"'
+    elif accel == "fcc_ee":
+        ip_ = None
+        if ip in ['1', '2']:
+            ip_ = ip
+        elif ip == '5':
+            ip_ = 3 
+        elif ip == '8':
+            ip_ = 4
+
+        bpmswl = '"BPMSW.1L' + str(ip_) +'.B'+ str(beam)+'"'
+        bpmswr = '"BPMSW.1R' + str(ip_) +'.B'+ str(beam)+'"'
+        
+        # FIX: VERY IMPORTANT this shit is not working wth
+        print(bpmswl)
+        print(bpmswr)
+        input()
 
     for line in sort_linesx:
         namebpm = '"'+line[1]+'"'
         ss=line[2]
+        print("checking xpos")
+        print(line)
+        print(sort_linesx.index(line))
+        print(diforbx[sort_linesx.index(line)])
+        print(diforbx[sort_linesx.index(line)][col])
+        print("Finished")
         posx=float(diforbx[sort_linesx.index(line)][col])
 
         if (namebpm == bpml):
@@ -410,7 +454,14 @@ def Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpml,bpmr,selx,nameelx,psix,betx,
         if (namebpm == bpmr):
             x_BPM_r=posx/1000 # converting mm to meters
         #print namebpm, bpmswl
+        
+        if 'B' in namebpm:
+            print(namebpm)
+            input()
+
         if (namebpm == bpmswl):
+            print("NEW ENTER")
+            input()
             x_bpm_swl=posx/1000 # converting mm to meters
         if (namebpm == bpmswr):
             x_bpm_swr=posx/1000 #
@@ -426,7 +477,13 @@ def Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpml,bpmr,selx,nameelx,psix,betx,
         psix_nfapj.append(psix[nameelx.index(namebpm)])
         s_nfapj.append(ss)
         bpm_nfapj.append(namebpm)
+
+        # FIX: IMPORTANT -> WHAT IS THIS EVEN SUPOSSED TO DO???????????????
+        # HACK: it returns true if accel is fcc
         def even_bpm(bpm):
+            if accel == "fcc_ee":
+                return True 
+
             digit1 = int(bpm[5])
             try:
                     digit0 = int(bpm[6])
@@ -437,13 +494,14 @@ def Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpml,bpmr,selx,nameelx,psix,betx,
             else: out = False
             return out
             
-        
-        if ((ss > sL_begin) and (ss < sL_end) and ('BPM.' in line[1]) and even_bpm(namebpm)):
+        # TODO: not recognizing our QUADs bpms 
+        # HACK: add that too
+        if ((ss > sL_begin) and (ss < sL_end) and (('BPM.' in line[1]) or ('Q' in line[1])) and even_bpm(namebpm)):
             xred_ant.append(posx*0.001/sqrt(betx[nameelx.index(namebpm)]))
             psix_ant.append(psix[nameelx.index(namebpm)])
             s_ant.append(ss)
             bpm_ant.append(namebpm)
-        if ((ss > sR_begin) and (ss < sR_end) and  ('BPM.' in line[1]) and even_bpm(namebpm)):
+        if ((ss > sR_begin) and (ss < sR_end) and  (('BPM.' in line[1]) or ('Q' in line[1])) and even_bpm(namebpm)):
             xred_desp.append(posx*0.001/sqrt(betx[nameelx.index(namebpm)]))
             psix_desp.append(psix[nameelx.index(namebpm)])
             s_desp.append(ss)
@@ -453,8 +511,11 @@ def Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpml,bpmr,selx,nameelx,psix,betx,
         # HACK: simply make it 0 if accel == fcc_ee 
         if accel == "fcc_ee":
             s_acdipole = 0.0
+    
 
-        if ((ss > s_acdipole) and (namebpm in  nameelxe) and ('BPM.' in line[1]) and even_bpm(namebpm) ):
+        if ((ss > s_acdipole) and (namebpm in  nameelxe) and (('BPM.' in line[1]) or ('Q' in line[1])) and even_bpm(namebpm) ):
+            print(posx)
+            print()
             xred_c.append(posx*0.001/sqrt(betxe[nameelxe.index(namebpm)]))
             psix_c.append(psixe[nameelxe.index(namebpm)])
             s_c.append(ss)
@@ -472,8 +533,22 @@ def Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpml,bpmr,selx,nameelx,psix,betx,
     APJact_nf, APJphase_nf = doaccionyfase(xred_nfapj,psix_nfapj)
     APJact_nfm = list(zip(lpad,bpm_nfapj, s_nfapj, APJact_nf))
     APJphase_nfm = list(zip(lpad,bpm_nfapj, s_nfapj, APJphase_nf))
+
+    # FIX: this is messing up because xred_c and psix_c are empty
     action_c, phase_c = doaccionyfase(xred_c,psix_c)
     actm = filter1a(s_c, action_c,bpm_c,plane)
+    
+    # print("xred_c")
+    # print(xred_c)
+    # print("psix_c")
+    # print(psix_c)
+    # print("action_c")
+    # print(action_c)
+    # print("phase_c")
+    # print(phase_c)
+    # print("actm")
+    # print(actm)
+
     averactc =float(actm[0][4])
     #averactc = (get_JPaver(xred_c,psix_c)[0]**2 + get_JPaver(xred_c,psix_c)[1]**2)/2    
     phasem = filter1a(s_c, phase_c,bpm_c,plane) 
@@ -653,7 +728,10 @@ def MT2avermax(tbt,bpm_max,betas_file,orb_apj_dir):
         psix.append(2*pi*float(sline[10]))
         bety.append(float(sline[4]))
         psiy.append(2*pi*float(sline[11]))
+    
+
     latticef.close()
+
 
     phas_elementx = psix[nameel.index(element_seq)]
     phas_elementy = psiy[nameel.index(element_seq)]
@@ -914,7 +992,7 @@ def get_meas_lattice(getllm_dir,beam,lattice, out_file):
             bpm_ini_orig='"BPMYB.5R8.B2"' # BPM were TbT data starts
             s_inj = 13906.0
 
-        # FIX: al parecer, estamos comparando las fases de los BPMs iniciales con los shifted. Esta bien dejarlas todas en 0?
+        # WARNING: al parecer, estamos comparando las fases de los BPMs iniciales con los shifted. Esta bien dejarlas todas en 0?
         modelline= [x for x in modeldata if x[0]==bpm_ini]
         phasex_ini = float(modelline[0][2])
         modelline= [x for x in modeldata if x[0]==bpm_ini_orig]
@@ -944,7 +1022,7 @@ def get_meas_lattice(getllm_dir,beam,lattice, out_file):
         phasey_ini_orig = 0.0
     else:
 
-        # FIX: lo mismo ocurre aquí 
+        # WARNING: lo mismo ocurre aquí 
         modelline= [x for x in modeldata if x[0]==bpm_ini]
         phasey_ini = float(modelline[0][3])
         modelline= [x for x in modeldata if x[0]==bpm_ini_orig]
@@ -1093,7 +1171,7 @@ def get_meas_lattice_omc3(getllm_dir,beam,lattice, out_file):
             bpm_ini_orig='"BPMYB.5R8.B2"' # BPM were TbT data starts
             s_inj = 13906.0
 
-        # FIX: al parecer, estamos comparando las fases de los BPMs iniciales con los shifted. Esta bien dejarlas todas en 0?
+        # WARNING: al parecer, estamos comparando las fases de los BPMs iniciales con los shifted. Esta bien dejarlas todas en 0?
         modelline= [x for x in modeldata if x[0]==bpm_ini]
         phasex_ini = float(modelline[0][2])
         modelline= [x for x in modeldata if x[0]==bpm_ini_orig]
@@ -1568,7 +1646,19 @@ def dphi_rad(phim,phit):
     (El promedio que toca modificar)
 """
 def get_arc_values(ip,parameter, accel = "lhc"):
+    # FIX: check the fcc arc lenghts
+    # HACK: done arc lenghts manually
     if accel != "fcc_ee":
+        ip1 = ['80500', '89900', '400', '10200']
+        ip2 = ['15000', '21770', '23100', '32500']
+        ip5 = ['35200', '44400', '45800', '55000']
+        ip8 = ['58700', '67000', '68500', '77900']
+        par_l=['left_arc_start','left_arc_end','right_arc_start','right_arc_end']
+        if (ip == '1'): value = ip1[par_l.index(parameter)]
+        if (ip == '2'): value = ip2[par_l.index(parameter)]
+        if (ip == '5' or ip == '3'): value = ip5[par_l.index(parameter)]
+        if (ip == '8' or ip == '4'): value = ip8[par_l.index(parameter)]
+    else:
         ip1 = ['14200', '16800', '17500', '20000']
         ip2 = ['17500', '19700', '21000', '23000']
         ip5 = ['1000', '3200', '4200', '6500']
@@ -1578,8 +1668,6 @@ def get_arc_values(ip,parameter, accel = "lhc"):
         if (ip == '2'): value = ip2[par_l.index(parameter)]
         if (ip == '5'): value = ip5[par_l.index(parameter)]
         if (ip == '8'): value = ip8[par_l.index(parameter)]
-    else:
-        # TODO: add these arc lenghts for the fcc
 
     return value
 ###########################################################################################################################################################################
@@ -2386,7 +2474,12 @@ for tbt_i in tbt_file:
     ##############Read average trajectory with max in horizontal plane and average trajectory with max in vertical plane#####
 
     orbitmax = open(name_orbitmax,'r')
-    print("Reading avermax trajectory...") 
+    print("Reading avermax trajectory...")
+
+    if "BPMSW.1L3.B1" in nameelx:
+        print("FOUND SOMETHING INTERESTING")
+        input()
+
     diforbx, sort_linesx = traj_data(orbitmax, nameelx,'-x')
 
     orbitmax = open(name_orbitmax,'r')
@@ -2401,18 +2494,20 @@ for tbt_i in tbt_file:
     
     
     # TODO: desactivar si jode
-    # WARN: check it does bug
-    if ((bpm_max not in bpms_averx) or (bpm_max not in bpms_avery)):
-        print(bpm_max , 'is not in',name_orbitmax,'. Position data ( in either x or/and y plane) for that BPM might not be available. Instead, Re-run the program and use one of the following BPMs',possibleBPMs(bpm_max,"bpm_for_avermax",ip,beam,accel), 'for "bpm_for_avermax (-ab)"')
-        exit()
-    if (Isbpms):
-        if ((bpml_nf not in bpms_averx) or (bpml_nf not in bpms_avery)):
-            print(bpml_nf , 'is not in',name_orbitmax,'. Position data ( in either x or/and y plane) for that BPM might not be available. Instead, Re-run the program and use one of the following BPMs',possibleBPMs(bpml_nf,"left_kick_bpm",ip,beam,accel), 'for "left_kick_bpm (-lb)"')
-            exit()
+    # WARN: check it does bug -> it bugged so simply commented
 
-        if ((bpmr_nf not in bpms_averx) or (bpmr_nf not in bpms_avery)):
-            print(bpmr_nf , 'is not in',name_orbitmax,'. Position data ( in either x or/and y plane) for that BPM might not be available. Instead, Re-run the program and use one of the following BPMs',possibleBPMs(bpmr_nf,"right_kick_bpm",ip,beam,accel), 'for "right_kick_bpm (-rb)"')
+    if accel != "fcc_ee":
+        if ((bpm_max not in bpms_averx) or (bpm_max not in bpms_avery)):
+            print(bpm_max , 'is not in',name_orbitmax,'. Position data ( in either x or/and y plane) for that BPM might not be available. Instead, Re-run the program and use one of the following BPMs',possibleBPMs(bpm_max,"bpm_for_avermax",ip,beam,accel), 'for "bpm_for_avermax (-ab)"')
             exit()
+        if (Isbpms):
+            if ((bpml_nf not in bpms_averx) or (bpml_nf not in bpms_avery)):
+                print(bpml_nf , 'is not in',name_orbitmax,'. Position data ( in either x or/and y plane) for that BPM might not be available. Instead, Re-run the program and use one of the following BPMs',possibleBPMs(bpml_nf,"left_kick_bpm",ip,beam,accel), 'for "left_kick_bpm (-lb)"')
+                exit()
+
+            if ((bpmr_nf not in bpms_averx) or (bpmr_nf not in bpms_avery)):
+                print(bpmr_nf , 'is not in',name_orbitmax,'. Position data ( in either x or/and y plane) for that BPM might not be available. Instead, Re-run the program and use one of the following BPMs',possibleBPMs(bpmr_nf,"right_kick_bpm",ip,beam,accel), 'for "right_kick_bpm (-rb)"')
+                exit()
 
 
         
@@ -2489,9 +2584,17 @@ for tbt_i in tbt_file:
     print('zy = ', '0.0000001', ';', file=icxf)
     print('zpy = ', '0', ';', file=icxf)
     icxf.close()
+   
 
-    ip_j_bpmsw.append([0,nameelx[nameelx.index('"'+'IP'+ip+ '"')],selx[nameelx.index('"'+'IP'+ip+'"')],act_trip_bpmsw])
-    ip_ph_bpmsw.append([0,nameelx[nameelx.index('"'+'IP'+ip+ '"')],selx[nameelx.index('"'+'IP'+ip+'"')],phase_trip_bpmsw])
+   # TODO: IP name changes 
+   # HACK: add the fcc conditional to deal with the name
+    if accel == "fcc_ee":
+        ipname = '"'+'IP.'+ip+ '"'
+    else:
+        ipname = '"'+'IP'+ip+ '"'
+
+    ip_j_bpmsw.append([0,nameelx[nameelx.index(ipname)],selx[nameelx.index(ipname)],act_trip_bpmsw])
+    ip_ph_bpmsw.append([0,nameelx[nameelx.index(ipname)],selx[nameelx.index(ipname)],phase_trip_bpmsw])
     if(Isbpmlr): 
         kickxl_bpmsw=kick_strength_v03(averactant,act_trip_bpmsw,averphaseant,phase_trip_bpmsw,betx[nameelx.index(bpml)],psix[nameelx.index(bpml)])
         kickxr_bpmsw=kick_strength_v03(act_trip_bpmsw,averactdesp,phase_trip_bpmsw,averphasedesp,betx[nameelx.index(bpmr)],psix[nameelx.index(bpmr)])
@@ -2502,8 +2605,13 @@ for tbt_i in tbt_file:
         xeq_r=posestim(betax_error_r,betax_BPM_r,psix_error_r,psix_BPM_r,averphasedesp,x_BPM_r)
         B1xeql_bpmsw = -kickxl_bpmsw/xeq_l
         B1xeqr_bpmsw = -kickxr_bpmsw/xeq_r
-        print(B1xeql_bpmsw,Betxeql, IntBetxQal,  IntBetxQbl, IntBetxQ4L,  IntBetxQ5L, IntBetxQ6L,PhixQal,  PhixQbl, PhixQ4L,  PhixQ5L, PhixQ6L, 0, IntBetxQ1L, file=resxlf_bpmsw)
-        print(B1xeqr_bpmsw,Betxeqr, IntBetxQar,  IntBetxQbr, IntBetxQ4R,  IntBetxQ5R, IntBetxQ6R,PhixQar,  PhixQbr, PhixQ4R,  PhixQ5R, PhixQ6R, 0, IntBetxQ1R, file=resxrf_bpmsw)
+
+    
+        # TODO: this prints stuff got solely during the correction phase
+        # HACK: not do this if not corrections were done
+        if accel != "fcc_ee":
+            print(B1xeql_bpmsw,Betxeql, IntBetxQal,  IntBetxQbl, IntBetxQ4L,  IntBetxQ5L, IntBetxQ6L,PhixQal,  PhixQbl, PhixQ4L,  PhixQ5L, PhixQ6L, 0, IntBetxQ1L, file=resxlf_bpmsw)
+            print(B1xeqr_bpmsw,Betxeqr, IntBetxQar,  IntBetxQbr, IntBetxQ4R,  IntBetxQ5R, IntBetxQ6R,PhixQar,  PhixQbr, PhixQ4R,  PhixQ5R, PhixQ6R, 0, IntBetxQ1R, file=resxrf_bpmsw)
 
     if (Is_ip_ap_kmod):
         #########betas at  bpmsws############
@@ -2544,10 +2652,15 @@ for tbt_i in tbt_file:
     else: xeq=posestim(betax_error,betax_BPM,psix_error,psix_BPM,averphaseant,x_BPM_l)
     
     
+    # TODO: corrections printings
+    # HACK: ignore
+
     B1xeq = -kickx/xeq
-    print(B1xeq, Betxeq, IntBetxQal,  IntBetxQar, IntBetxQ4L,  IntBetxQ5L, IntBetxQ6L,PhixQal,  PhixQbl, PhixQ4L,  PhixQ5L, PhixQ6L, 0, IntBetxQ1L, B1xeq*Betxeq, file=resxf)
-    bb_2corrs.append(-B1xeq*Betxeq)
-    aa_2corrs.append([IntBetxQal,  IntBetxQar])
+
+    if accel != "fcc_ee":
+        print(B1xeq, Betxeq, IntBetxQal,  IntBetxQar, IntBetxQ4L,  IntBetxQ5L, IntBetxQ6L,PhixQal,  PhixQbl, PhixQ4L,  PhixQ5L, PhixQ6L, 0, IntBetxQ1L, B1xeq*Betxeq, file=resxf)
+        bb_2corrs.append(-B1xeq*Betxeq)
+        aa_2corrs.append([IntBetxQal,  IntBetxQar])
 
     #print "averages", averactant, averphaseant, averactdesp, averphasedesp, actlx[0][4], phaselx[0][4], act_trip, phase_trip
 
@@ -2633,6 +2746,7 @@ for tbt_i in tbt_file:
             bty = bety[nameely.index('"BPM.11L4.B2"')]
             aly = alfy[nameely.index('"BPM.11L4.B2"')]
 
+    zy=-sqrt(2*averactant*bty)*sin(averphaseant)
     zpy=sqrt(2*averactant/bty) *(aly*sin(averphaseant)+cos(averphaseant) )
     print('bty = ', bty, ';', file=icyf)
     print('aly = ', aly, ';', file=icyf)
@@ -2641,8 +2755,16 @@ for tbt_i in tbt_file:
     print('zx = ', '0.0000001', ';', file=icyf)
     print('zpx = ', '0', ';', file=icyf)
     icyf.close()
-    ip_j_bpmsw.append([1,nameely[nameely.index('"'+'IP'+ip+'"')],sely[nameely.index('"'+'IP'+ip+'"')],act_trip_bpmsw])
-    ip_ph_bpmsw.append([1,nameely[nameely.index('"'+'IP'+ip+'"')],sely[nameely.index('"'+'IP'+ip+'"')],phase_trip_bpmsw])
+
+    # TODO: IP name changes 
+    # HACK: add the fcc conditional to deal with the name
+    if accel == "fcc_ee":
+        ipname = '"'+'IP.'+ip+ '"'
+    else:
+        ipname = '"'+'IP'+ip+ '"'
+
+    ip_j_bpmsw.append([1,nameely[nameely.index(ipname)],sely[nameely.index(ipname)],act_trip_bpmsw])
+    ip_ph_bpmsw.append([1,nameely[nameely.index(ipname)],sely[nameely.index(ipname)],phase_trip_bpmsw])
     if(Isbpmlr): 
         kickyl_bpmsw=kick_strength_v03(averactant,act_trip_bpmsw,averphaseant,phase_trip_bpmsw,bety[nameely.index(bpml)],psiy[nameely.index(bpml)])
         kickyr_bpmsw=kick_strength_v03(act_trip_bpmsw,averactdesp,phase_trip_bpmsw,averphasedesp,bety[nameely.index(bpmr)],psiy[nameely.index(bpmr)])
@@ -2653,8 +2775,12 @@ for tbt_i in tbt_file:
         yeq_r=posestim(betay_error_r,betay_BPM_r,psiy_error_r,psiy_BPM_r,averphasedesp,y_BPM_r)
         B1yeql_bpmsw = kickyl_bpmsw/yeq_l
         B1yeqr_bpmsw = kickyr_bpmsw/yeq_r
-        print(B1yeql_bpmsw,Betyeql, IntBetyQal,  IntBetyQbl, IntBetyQ4L,  IntBetyQ5L, IntBetyQ6L,PhiyQal,  PhiyQbl, PhiyQ4L,  PhiyQ5L, PhiyQ6L, 0, IntBetyQ1L, file=resylf_bpmsw)
-        print(B1yeqr_bpmsw,Betyeqr, IntBetyQar,  IntBetyQbr, IntBetyQ4R,  IntBetyQ5R, IntBetyQ6R,PhiyQar,  PhiyQbr, PhiyQ4R,  PhiyQ5R, PhiyQ6R, 0, IntBetyQ1R, file=resyrf_bpmsw)
+    
+        # TODO: correction printings 
+        # HACK: ignore 
+        if accel != "fcc_ee":
+            print(B1yeql_bpmsw,Betyeql, IntBetyQal,  IntBetyQbl, IntBetyQ4L,  IntBetyQ5L, IntBetyQ6L,PhiyQal,  PhiyQbl, PhiyQ4L,  PhiyQ5L, PhiyQ6L, 0, IntBetyQ1L, file=resylf_bpmsw)
+            print(B1yeqr_bpmsw,Betyeqr, IntBetyQar,  IntBetyQbr, IntBetyQ4R,  IntBetyQ5R, IntBetyQ6R,PhiyQar,  PhiyQbr, PhiyQ4R,  PhiyQ5R, PhiyQ6R, 0, IntBetyQ1R, file=resyrf_bpmsw)
 
 
     if (Is_ip_ap_kmod):
@@ -2686,11 +2812,13 @@ for tbt_i in tbt_file:
     
 
     B1yeq = kicky/yeq
- 
 
-    print(B1yeq,Betyeq, IntBetyQal,  IntBetyQar, IntBetyQ4L,  IntBetyQ5L, IntBetyQ6L,PhiyQal,  PhiyQbl, PhiyQ4L,  PhiyQ5L, PhiyQ6L, 0, IntBetyQ1L , B1yeq*Betyeq, file=resyf)
-    bb_2corrs.append(-B1yeq*Betyeq)
-    aa_2corrs.append([IntBetyQal,  IntBetyQar])
+    # TODO: correction printings 
+    # HACK: ignore 
+    if accel != "fcc_ee": 
+        print(B1yeq,Betyeq, IntBetyQal,  IntBetyQar, IntBetyQ4L,  IntBetyQ5L, IntBetyQ6L,PhiyQal,  PhiyQbl, PhiyQ4L,  PhiyQ5L, PhiyQ6L, 0, IntBetyQ1L , B1yeq*Betyeq, file=resyf)
+        bb_2corrs.append(-B1yeq*Betyeq)
+        aa_2corrs.append([IntBetyQal,  IntBetyQar])
     #dphim = dphi_rad()
     #
     #
@@ -2762,12 +2890,15 @@ for tbt_i in tbt_file:
         print(corrq2r_name , corrq2r_kmod)
         print(corrq3r_name , corrq3r_kmod)
         print("\n")
-    print(" corrections with 2 quads per IR")
-    corrq2l = (B1yeq*Betyeq*IntBetxQar - B1xeq*Betxeq*IntBetyQar)/(IntBetxQal*IntBetyQar - IntBetxQar*IntBetyQal)
-    corrq2r = (B1xeq*Betxeq*IntBetyQal - B1yeq*Betyeq*IntBetxQal)/(IntBetxQal*IntBetyQar - IntBetxQar*IntBetyQal)
-    print(corrq2l_name, corrq2l)
-    print(corrq2r_name , corrq2r)
-    #print >> fcorrs_bpmsw, '{:^8.6}'.format(corrq2l_bpmsw), '{:^8.6}'.format(corrq3l_bpmsw), '{:^8.6}'.format(corrq2r_bpmsw), '{:^8.6}'.format(corrq3r_bpmsw)##Highly sensitive to BPM calibrations. Use for simulations only
+
+
+    if accel != "fcc_ee":
+        print(" corrections with 2 quads per IR")
+        corrq2l = (B1yeq*Betyeq*IntBetxQar - B1xeq*Betxeq*IntBetyQar)/(IntBetxQal*IntBetyQar - IntBetxQar*IntBetyQal)
+        corrq2r = (B1xeq*Betxeq*IntBetyQal - B1yeq*Betyeq*IntBetxQal)/(IntBetxQal*IntBetyQar - IntBetxQar*IntBetyQal)
+        print(corrq2l_name, corrq2l)
+        print(corrq2r_name , corrq2r)
+        #print >> fcorrs_bpmsw, '{:^8.6}'.format(corrq2l_bpmsw), '{:^8.6}'.format(corrq3l_bpmsw), '{:^8.6}'.format(corrq2r_bpmsw), '{:^8.6}'.format(corrq3r_bpmsw)##Highly sensitive to BPM calibrations. Use for simulations only
     print("########## END #######################")
     print("\n")
     print("\n")

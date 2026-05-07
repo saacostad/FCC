@@ -43,22 +43,24 @@ def inversion2(z1, z2, psi1, psi2):
 def doaccionyfase(zred,psiz):
 #El primer elemento no se calcula, debido a que el calculo es entre dos BPMs
 #y el final de la orbita no se une con el principio
-	action=[0]
-	phase=[0]
+    # print(zred)
+    # print(psiz)
+    action=[0]
+    phase=[0]
     #for i in range(len(s)-1):
-	for i in range(len(zred)-1):
-		if (zred[i]==0) and (zred[i+1]==0):#Valores para ser descartados luego
-			j=0.0
-			delta=100.0
-		else:#Calculo real
-			j,delta=inversion(zred[i],zred[i+1],psiz[i],psiz[i+1])
+    for i in range(len(zred)-1):
+        if (zred[i]==0) and (zred[i+1]==0):#Valores para ser descartados luego
+            j=0.0
+            delta=100.0
+        else:#Calculo real
+            j,delta=inversion(zred[i],zred[i+1],psiz[i],psiz[i+1])
 
-		action.append(j)
-		phase.append(delta)
-	#El primer elemento igual al segundo
-	action[0]=action[1]
-	phase[0]=phase[1]
-	return action,phase
+        action.append(j)
+        phase.append(delta)
+    #El primer elemento igual al segundo
+    action[0]=action[1]
+    phase[0]=phase[1]
+    return action,phase
 #-----------------------------------------------------------------------
 # CALCULAR KICK
 #Calcula la magnitud y el signo del kick
