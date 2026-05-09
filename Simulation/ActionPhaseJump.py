@@ -66,10 +66,10 @@ def traj_data(orbitfile,nameel,eje):
         else:
             name = '"'+cutline[1]+'"'
             if name in nameel:
-                print("ENTERED 1")
+                # print("ENTERED 1")
                 # print(type(cutline[0]))
                 if (cutline[0] == plane):
-                    print("ENTERED 2")
+                    # print("ENTERED 2")
                     locationx = float(cutline.pop(2)) #change axial position to float
                     cutline.insert(2,locationx)
                     allinesx.append(cutline)
@@ -432,21 +432,12 @@ def Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpml,bpmr,selx,nameelx,psix,betx,
 
         bpmswl = '"BPMSW.1L' + str(ip_) +'.B'+ str(beam)+'"'
         bpmswr = '"BPMSW.1R' + str(ip_) +'.B'+ str(beam)+'"'
-        
-        # FIX: VERY IMPORTANT this shit is not working wth
-        print(bpmswl)
-        print(bpmswr)
-        input()
+
 
     for line in sort_linesx:
         namebpm = '"'+line[1]+'"'
         ss=line[2]
-        print("checking xpos")
-        print(line)
-        print(sort_linesx.index(line))
-        print(diforbx[sort_linesx.index(line)])
-        print(diforbx[sort_linesx.index(line)][col])
-        print("Finished")
+
         posx=float(diforbx[sort_linesx.index(line)][col])
 
         if (namebpm == bpml):
@@ -454,14 +445,10 @@ def Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpml,bpmr,selx,nameelx,psix,betx,
         if (namebpm == bpmr):
             x_BPM_r=posx/1000 # converting mm to meters
         #print namebpm, bpmswl
-        
-        if 'B' in namebpm:
-            print(namebpm)
-            input()
+
 
         if (namebpm == bpmswl):
-            print("NEW ENTER")
-            input()
+
             x_bpm_swl=posx/1000 # converting mm to meters
         if (namebpm == bpmswr):
             x_bpm_swr=posx/1000 #
@@ -514,8 +501,7 @@ def Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpml,bpmr,selx,nameelx,psix,betx,
     
 
         if ((ss > s_acdipole) and (namebpm in  nameelxe) and (('BPM.' in line[1]) or ('Q' in line[1])) and even_bpm(namebpm) ):
-            print(posx)
-            print()
+
             xred_c.append(posx*0.001/sqrt(betxe[nameelxe.index(namebpm)]))
             psix_c.append(psixe[nameelxe.index(namebpm)])
             s_c.append(ss)
@@ -535,19 +521,11 @@ def Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpml,bpmr,selx,nameelx,psix,betx,
     APJphase_nfm = list(zip(lpad,bpm_nfapj, s_nfapj, APJphase_nf))
 
     # FIX: this is messing up because xred_c and psix_c are empty
+    # WARNING: apparently it is fixed already
     action_c, phase_c = doaccionyfase(xred_c,psix_c)
     actm = filter1a(s_c, action_c,bpm_c,plane)
     
-    # print("xred_c")
-    # print(xred_c)
-    # print("psix_c")
-    # print(psix_c)
-    # print("action_c")
-    # print(action_c)
-    # print("phase_c")
-    # print(phase_c)
-    # print("actm")
-    # print(actm)
+
 
     averactc =float(actm[0][4])
     #averactc = (get_JPaver(xred_c,psix_c)[0]**2 + get_JPaver(xred_c,psix_c)[1]**2)/2    
@@ -2476,9 +2454,6 @@ for tbt_i in tbt_file:
     orbitmax = open(name_orbitmax,'r')
     print("Reading avermax trajectory...")
 
-    if "BPMSW.1L3.B1" in nameelx:
-        print("FOUND SOMETHING INTERESTING")
-        input()
 
     diforbx, sort_linesx = traj_data(orbitmax, nameelx,'-x')
 
