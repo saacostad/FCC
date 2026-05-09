@@ -2565,8 +2565,15 @@ for tbt_i in tbt_file:
     # FIX: which values should I put here
     # HACK: will use the IP values next to the QP for not
     if accel == "fcc_ee":
-        btx = betx[nameelx.index(f'"BPMSW.1L{ip}.B1"')]
-        alx = alfx[nameelx.index(f'"BPMSW.1L{ip}.B1"')]
+        if ip in ['1', '2']:
+            ip_ = ip
+        elif ip == '5':
+            ip_ = 3 
+        elif ip == '8':
+            ip_ = 4       
+
+        btx = betx[nameelx.index(f'"BPMSW.1L{ip_}.B1"')]
+        alx = alfx[nameelx.index(f'"BPMSW.1L{ip_}.B1"')]
     else:
         if (beam == '1'):
             btx = betx[nameelx.index('"BPM.8L4.B1"')]
@@ -2589,6 +2596,12 @@ for tbt_i in tbt_file:
    # TODO: IP name changes 
    # HACK: add the fcc conditional to deal with the name
     if accel == "fcc_ee":
+        if ip in ['1', '2']:
+            ip_ = ip
+        elif ip == '5':
+            ip_ = 3 
+        elif ip == '8':
+            ip_ = 4       
         ipname = '"'+'IP.'+ip+ '"'
     else:
         ipname = '"'+'IP'+ip+ '"'
@@ -2735,9 +2748,15 @@ for tbt_i in tbt_file:
     icyf = open(orb_apj_dir+'icy.madx','w')
     # FIX: which values should I put here
     # HACK: will use the IP values next to the QP for not
-    if accel == "fcc_ee":
-        bty = bety[nameely.index(f'"BPMSW.1L{ip}.B1"')]
-        aly = alfy[nameely.index(f'"BPMSW.1L{ip}.B1"')]
+    if accel == "fcc_ee":        
+        if ip in ['1', '2']:
+            ip_ = ip
+        elif ip == '5':
+            ip_ = 3 
+        elif ip == '8':
+            ip_ = 4       
+        bty = bety[nameely.index(f'"BPMSW.1L{ip_}.B1"')]
+        aly = alfy[nameely.index(f'"BPMSW.1L{ip_}.B1"')]
     else:
         if (beam == '1'):
             bty = bety[nameely.index('"BPM.8L4.B1"')]
