@@ -128,7 +128,11 @@ def prepare_zPsi(twissFile, averFile):
     twissDF = tfs.read_tfs(twissFile)
     averDF = pd.read_csv(averFile, sep = " ", names=["NAME", "S", "X", "Y"])
     
-    df = pd.merge(averDF[['NAME', 'X', 'Y']], twissDF[['NAME', 'MUX', 'MUY']], on='NAME')
+    # Ensure the 'NAME' column is consistent between DataFrames
+    averDF['NAME'] = averDF['NAME'].str.strip('"')
+    twissDF['NAME'] = twissDF['NAME'].str.strip('"')
+
+    df = pd.merge(averDF[['NAME', 'S']], twissDF[['NAME', 'MUX', 'MUY']], on='NAME')
     
     return df['X'].tolist(), df['MUX'].tolist(), df['Y'].tolist(), df['MUY'].tolist(), df['S'].tolist()
 
