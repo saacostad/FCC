@@ -16,6 +16,7 @@ import numpy as np
 import tfs as tfs
 import pandas as pd
 from tools.utils_ActPhase10 import doaccionyfase
+import matplotlib.pyplot as plt
 
 
 # By how much scale the lectures of BPMs on each axis
@@ -159,4 +160,22 @@ xaction, xphase = doaccionyfase(x, mux)
 yaction, yphase = doaccionyfase(y, muy)
 
 
-print(xphase)
+# Plotting the action and phase with respect to s_values
+plt.figure(figsize=(12, 6))
+
+plt.subplot(1, 2, 1)
+plt.plot(s_values, xaction, label='X Action')
+plt.xlabel('S Values')
+plt.ylabel('Action')
+plt.title('X Action vs S Values')
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(s_values, yaction, label='Y Action')
+plt.xlabel('S Values')
+plt.ylabel('Action')
+plt.title('Y Action vs S Values')
+plt.legend()
+
+plt.tight_layout()
+plt.show()
