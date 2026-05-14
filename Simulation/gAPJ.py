@@ -132,7 +132,7 @@ def prepare_zPsi(twissFile, averFile):
     averDF['NAME'] = averDF['NAME'].str.strip('"')
     twissDF['NAME'] = twissDF['NAME'].str.strip('"')
 
-    df = pd.merge(averDF[['NAME', 'S']], twissDF[['NAME', 'MUX', 'MUY']], on='NAME')
+    df = pd.merge(averDF[['NAME', 'S', 'X', 'Y']], twissDF[['NAME', 'MUX', 'MUY']], on='NAME')
     
     return df['X'].tolist(), df['MUX'].tolist(), df['Y'].tolist(), df['MUY'].tolist(), df['S'].tolist()
 
