@@ -169,6 +169,7 @@ plt.xlabel('S Values')
 plt.ylabel('Action')
 plt.title('X Action vs S Values')
 plt.legend()
+plt.ylim(-1e-2, 1e-2)  # Add y limits
 
 plt.subplot(1, 2, 2)
 plt.plot(s_values, yaction, label='Y Action')
@@ -176,6 +177,7 @@ plt.xlabel('S Values')
 plt.ylabel('Action')
 plt.title('Y Action vs S Values')
 plt.legend()
+plt.ylim(-1e-2, 1e-2)  # Add y limits
 
 plt.tight_layout()
 plt.show()
