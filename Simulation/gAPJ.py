@@ -134,6 +134,9 @@ def prepare_zPsi(twissFile, averFile):
 
     df = pd.merge(averDF[['NAME', 'S', 'X', 'Y']], twissDF[['NAME', 'MUX', 'MUY']], on='NAME')
     
+    # Sort the dataframe by the 'S' column
+    df.sort_values(by='S', inplace=True)
+    
     return df['X'].tolist(), df['MUX'].tolist(), df['Y'].tolist(), df['MUY'].tolist(), df['S'].tolist()
 
 
