@@ -122,7 +122,7 @@ def prepare_zPsi(twissFile, averFile):
     avermax file so the action and phase function does not explodes.
 
     Input: twissFile and averFile are the paths to these files 
-    Output: 4 lists ready to be passed to the APJ function xred, psix, yred, psiy
+    Output: 5 lists ready to be passed to the APJ function xred, psix, yred, psiy, s_values
     """
 
     twissDF = tfs.read_tfs(twissFile)
@@ -130,7 +130,7 @@ def prepare_zPsi(twissFile, averFile):
     
     df = pd.merge(averDF[['NAME', 'X', 'Y']], twissDF[['NAME', 'MUX', 'MUY']], on='NAME')
     
-    return df['X'].tolist(), df['MUX'].tolist(), df['Y'].tolist(), df['MUY'].tolist(),
+    return df['X'].tolist(), df['MUX'].tolist(), df['Y'].tolist(), df['MUY'].tolist(), df['S'].tolist()
 
 
 # dfs = read_madx_track("fcc_ee_test_simulation/tbt/trackone")
@@ -146,7 +146,7 @@ CONVENCIONES AVERMAX PROFESOR
 
 '''
 
-x, mux, y, muy = prepare_zPsi("fcc_ee_test_simulation/twiss.dat", "avermax.csv")
+x, mux, y, muy, s_values = prepare_zPsi("fcc_ee_test_simulation/twiss.dat", "avermax.csv")
 
 xaction, xphase = doaccionyfase(x, mux)
 yaction, yphase = doaccionyfase(y, muy)
