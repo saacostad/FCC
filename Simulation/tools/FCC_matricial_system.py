@@ -103,7 +103,7 @@ def CreateConstants(Q, u, v):
     \vec v^u \hat Q \vec v
     """
 
-    return(v @ Q @ u, v @ Q @ v, u @ Q @ u, u @ Q @ v)
+    return v @ Q @ u, v @ Q @ v, u @ Q @ u, u @ Q @ v
 
 
 def createFirstOrderMatrix(ux, vx, uy, vy):
@@ -121,7 +121,29 @@ def createFirstOrderMatrix(ux, vx, uy, vy):
 """
 HERE I'LL TRY TO CREATE THE SYSTEM WITH ONLY 2 BASES SIN(PSI) AND COS(PSI)
 """
+def createSystem_base2(Kerrors, Betas, Phis, delta0, axis, grad = 8):
+    """ This function takes the Betas, Phis and errors (and the \delta_0 value) and creates and evaluates
+    the "Simulated" side of the system of equations.
 
+    Inputs: Kerros, Betas, Phis -> np.array of len QP   
+            delta0 ->   constant \delta_0   
+            axis: {'X', 'Y'} -> decides the p value
+    """
+
+    p = 1.0 if axis == 'X' else -1.0
+
+    # Create the matricial system
+    Q, u, v = CreateSystem(Betas, Phis, Kerrors, p, grad)
+    
+    # Create the big constants
+    vQu, vQv, uQu, uQv = CreateConstants(Q, u, v)
+
+    # The cos(\delta_0) for the calculations
+    cosd = np.cos(delta0)
+    sind = np.sin(delta0)
+    
+    # Return the two cosntants
+    return cosd*vQu - sind*vQv, -cosd*uQu + sind*uQv
 
     
     

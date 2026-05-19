@@ -1,7 +1,10 @@
 import numpy as np 
-import matplotlib.pyplot as plt 
-import tools.FCC_matricial_system as FCC
+from tools.FCC_matricial_system import createSystem_base2 as createSystem   # This is the left hand side of the equation
 import pandas as pd
+from scipy.optimize import least_squares
+
+
+# TODO: if this works, I'll probably have to make all of these variables accessible via parsing
 
 # Working now with IP.2
 IP = 2
@@ -22,10 +25,13 @@ rightArc = (23500, 30000)
 
 
 # TODO: check the best quadrupole selection
-
 # Names of the quadrupoles we'll use to make the corrections
-QUADRUPOLES_SELECTION = ["QC3L.2", "QC0L.2", "QC4.3", "QC0.3"]
+QUADRUPOLES_SELECTION = ["QC4L.1", "QC3L.1", "QC0.2", "QC3.2"]
 # ATM I've chosen them so they have the most similar possible beta values for x and y
+
+
+# Initial guess for the errors
+ERR_init = np.zeros(len(QUADRUPOLES_SELECTION))
 
 
 # We'll create a function to calculate the APJ parameters easily
@@ -72,7 +78,9 @@ def get_APJ_parameter(path, axis, left_arc, right_arc):
 
 def get_observed_system(mxp, myp, pxp, pyp):
     """ Given the 4 APJ .sdds paths, this function gets the values of each one of the APJ variables and,
-    according to Santiago's theory, created the right hand side vector to be solved by the system of equations """
+    according to Santiago's theory, created the right hand side vector to be solved by the system of equations 
+
+    OUTPUT: np.array with the constants of RHS  |   value of delta_0x   |   value of delta_0y"""
 
     # Obtenemos acciones y fases para eje x
     J0x, J1x = get_APJ_parameter(mxp, 'X', leftArc, rightArc)
@@ -97,7 +105,7 @@ def get_observed_system(mxp, myp, pxp, pyp):
     cosCont_Y = calculate_C_contribution(J0y, J1y, P0y, P1y)
 
     # Return the RHS vector
-    return np.array([SinCont_X, cosCont_X, SinCont_Y, cosCont_Y])
+    return np.array([SinCont_X, cosCont_X, SinCont_Y, cosCont_Y]), P0x, P0y
 
 
 
@@ -147,9 +155,44 @@ def get_quadrupoles_lattice_functions(path, QPlist):
 
 
 
+"""
+=================================================================
+        MAIN EXECUTION OF THE SCRIPT
+=================================================================
+"""
+
+if __name__ == '__main__':
+
+    # First, we get the right hand side vector of the system 
+    RHS, delta0_x, delta0_y = get_observed_system(MUXpath, MUYpath, PHASEXpath, PHASEYpath)
+
+    # In order to create the left hand side, we need to retreive the lattice functions of the quadrupoles of interest
+    latticeDF = get_quadrupoles_lattice_functions(integrals_path, QUADRUPOLES_SELECTION)
+
+    # We will now create simple lists of the lattice functions for easier access
+    BETX = latticeDF['BETX'].to_numpy()
+    BETY = latticeDF['BETY'].to_numpy()
+    MUX = latticeDF['MUX'].to_numpy()
+    MUY = latticeDF['MUY'].to_numpy()
 
 
+    # We'll create the residual function to use with Least_Squares()
+    def residual(K):
+
+        # We create the constants for both axis
+        Sx, Cx = createSystem(K, BETX, MUX, delta0_x, axis = 'X')
+        Sy, Cy = createSystem(K, BETY, MUY, delta0_y, axis = 'Y')
+        
+        # Return the residual
+        return np.array([Sx, Cx, -Sy, -Cy]) - RHS
 
 
+    """ CALCULATE THE ERRORS STIMATIONS """
+    ERR_stimations = least_squares(residual, ERR_init, ftol = 1e-12)
+    
 
-print(get_quadrupoles_lattice_functions(integrals_path, QUADRUPOLES_SELECTION))
+    print("Errors estimation:")
+    print(QUADRUPOLES_SELECTION)
+    print(ERR_stimations.x)
+
+    print("\nWith a residue of: ", residual(ERR_stimations.x))
