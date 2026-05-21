@@ -22,9 +22,11 @@ import datetime
 #-----------------------------------------------------------------------
 
 
+
 # BIG TODO 
 # TODO: por alguna extraña razón, el avermax no me está guardando todos los BPMs. Esto es un error en el MT2avermax, posiblemente 
 # en el diforb a sorted_lines_readz puesto que es aquí en donde se guarda la lista con la cual, finalmente, creamos el avermax.
+
 
 
 """

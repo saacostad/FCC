@@ -138,7 +138,7 @@ def prepare_zPsi(twissFile, averFile):
     # Sort the dataframe by the 'S' column
     df.sort_values(by='S', inplace=True)
     
-    return df['X'].tolist(), df['MUX'].tolist(), df['Y'].tolist(), df['MUY'].tolist(), df['S'].tolist()
+    return df['X'].tolist(), (df['MUX']*(2.0*np.pi)).tolist(), df['Y'].tolist(), (df['MUY']*(2.0*np.pi)).tolist(), df['S'].tolist()
 
 
 # dfs = read_madx_track("fcc_ee_test_simulation/tbt/trackone")
@@ -154,7 +154,7 @@ CONVENCIONES AVERMAX PROFESOR
 
 '''
 
-x, mux, y, muy, s_values = prepare_zPsi("fcc_ee_test_simulation/twiss.dat", "avermax.csv")
+x, mux, y, muy, s = prepare_zPsi("fcc_ee_test_simulation/tbt/twiss_err.tfs", "avermax.csv")
 
 xaction, xphase = doaccionyfase(x, mux)
 yaction, yphase = doaccionyfase(y, muy)
@@ -164,20 +164,18 @@ yaction, yphase = doaccionyfase(y, muy)
 plt.figure(figsize=(12, 6))
 
 plt.subplot(1, 2, 1)
-plt.plot(s_values, xaction, label='X Action')
+plt.scatter(s, xaction, label='X Action')
 plt.xlabel('S Values')
 plt.ylabel('Action')
 plt.title('X Action vs S Values')
 plt.legend()
-plt.ylim(-1e-2, 1e-2)  # Add y limits
 
 plt.subplot(1, 2, 2)
-plt.plot(s_values, yaction, label='Y Action')
+plt.scatter(s, yaction, label='Y Action')
 plt.xlabel('S Values')
 plt.ylabel('Action')
 plt.title('Y Action vs S Values')
 plt.legend()
-plt.ylim(-1e-2, 1e-2)  # Add y limits
 
 plt.tight_layout()
 plt.show()

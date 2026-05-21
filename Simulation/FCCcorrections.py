@@ -5,33 +5,58 @@ from scipy.optimize import least_squares
 
 
 # TODO: if this works, I'll probably have to make all of these variables accessible via parsing
+# FIX: it kinda worked so better to think about parsing
 
 # Working now with IP.2
 IP = 2
 
-# Path of the output files we'll be dealing with 
-MUXpath = "APJresults/HmaxAPJaction_nofilt.sdds"
-MUYpath = "APJresults/VmaxAPJaction_nofilt.sdds"
-PHASEXpath = "APJresults/HmaxAPJphase_nofilt.sdds"
-PHASEYpath = "APJresults/VmaxAPJphase_nofilt.sdds"
+# Path of the output files we'll be dealing with
+out_path = "fcc_ee_test_simulation/tbt_simu/sim_tbt"
+MUXpath = out_path + "/HmaxAPJaction_nofilt.sdds"
+MUYpath = out_path + "/VmaxAPJaction_nofilt.sdds"
+PHASEXpath = out_path + "/HmaxAPJphase_nofilt.sdds"
+PHASEYpath = out_path + "/VmaxAPJphase_nofilt.sdds"
 
 # Path of the integrals file from where to get the lattice functions
 integrals_path = "fcc_ee_test_simulation/integrals.dat"
 
 
 # Arcs regions to calculate previous and posterior APJ values
-leftArc = (15000, 20000)
-rightArc = (23500, 30000)
 
+
+
+# TODO: check the quadrupoles for IP 1 and 4
+def get_arc(IP):
+    leftArc = None 
+    rightArc = None 
+    QUADRUPOLES_SELECTION = None
+
+    if IP == 2:
+        leftArc = (15000, 20000)
+        rightArc = (23500, 30000)
+        # QUADRUPOLES_SELECTION = ["QC4L.1", "QC3L.1",  "QC0L.1"  , "QC0.2", "QC3.2"]
+        QUADRUPOLES_SELECTION = ["QC4L.1", "QC3L.1", "QC0.2", "QC3.2"]
+    elif IP == 5 or IP == 3:
+        leftArc = (32000, 41900)
+        rightArc = (47000, 60000)
+        QUADRUPOLES_SELECTION = ["QC4L.2", "QC3L.2", "QC0.3", "QC3.3"]
+    elif IP == 7 or IP == 4:
+        leftArc = (60000, 66000)
+        rightArc = (69000, 80000)
+        QUADRUPOLES_SELECTION = ["QC4L.1", "QC3L.1", "QC0.2", "QC3.2"]
+    elif IP == 8 or IP == 1:
+        leftArc = (80000, 88000)
+        rightArc = (1000, 14000)
+        QUADRUPOLES_SELECTION = ["QC4L.1", "QC3L.1", "QC0.2", "QC3.2"]
+    
+    return leftArc, rightArc, QUADRUPOLES_SELECTION
 
 # TODO: check the best quadrupole selection
 # Names of the quadrupoles we'll use to make the corrections
-QUADRUPOLES_SELECTION = ["QC4L.1", "QC3L.1", "QC0.2", "QC3.2"]
 # ATM I've chosen them so they have the most similar possible beta values for x and y
 
 
-# Initial guess for the errors
-ERR_init = np.zeros(len(QUADRUPOLES_SELECTION))
+
 
 
 # We'll create a function to calculate the APJ parameters easily
@@ -163,6 +188,11 @@ def get_quadrupoles_lattice_functions(path, QPlist):
 
 if __name__ == '__main__':
 
+    leftArc, rightArc, QUADRUPOLES_SELECTION = get_arc(IP)
+
+    # Initial guess for the errors
+    ERR_init = np.zeros(len(QUADRUPOLES_SELECTION))
+
     # First, we get the right hand side vector of the system 
     RHS, delta0_x, delta0_y = get_observed_system(MUXpath, MUYpath, PHASEXpath, PHASEYpath)
 
@@ -188,11 +218,44 @@ if __name__ == '__main__':
 
 
     """ CALCULATE THE ERRORS STIMATIONS """
-    ERR_stimations = least_squares(residual, ERR_init, ftol = 1e-12)
+    ERR_estimations = least_squares(residual, ERR_init, ftol = 1e-12).x
     
 
     print("Errors estimation:")
     print(QUADRUPOLES_SELECTION)
-    print(ERR_stimations.x)
+    print(ERR_estimations)
 
-    print("\nWith a residue of: ", residual(ERR_stimations.x))
+    print("\nWith a residue of: ", residual(ERR_estimations))
+
+
+    # Write to the file
+    # Build lookup dictionary
+    err_dict = dict(zip(QUADRUPOLES_SELECTION, ERR_estimations))
+
+    # Read and modify file
+    with open("IR_errors+corrections.madx", "r") as f:
+        lines = f.readlines()
+
+    new_lines = []
+
+    for line in lines:
+        # Get the quadrupole name (before '->')
+        quad_name = line.split("->")[0].strip()
+
+        if quad_name in err_dict:
+            err = err_dict[quad_name]
+
+            # Remove trailing semicolon/newline, append new term, add semicolon back
+            if err < 0:
+                line = line.rstrip(";\n") + f"-{abs(err)};\n"
+            else:
+                line = line.rstrip(";\n") + f"+{abs(err)};\n"
+
+        new_lines.append(line)
+
+    # Write back
+    with open("IR_errors+corrections.madx", "w") as f:
+        f.writelines(new_lines)
+
+
+    print("Finished writing to file")

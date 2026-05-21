@@ -81,6 +81,7 @@ filtered_df = get_elements_around_ip(df, args.IP, float(args.window))
 
 # Now, we'll write the errors and corrections files 
 e_f = open("IR_errors.madx",'w')
+c_f = open("IR_errors+corrections.madx", 'w')
 
 if args.random_flag:
     for _, QP in filtered_df.iterrows():
@@ -88,7 +89,9 @@ if args.random_flag:
         name = QP["NAME"] # We get the name of the QP  
 
         # We'll write the errors for each of the quadrupoles 
-        print(f"{name}->K1 = {name}->K1 + {np.random.normal(0.0, float(args.random_sigma))};", file = e_f)
+        err = np.random.normal(0.0, float(args.random_sigma))
+        print(f"{name}->K1 = {name}->K1 + {err};", file = e_f)
+        print(f"{name}->K1 = {name}->K1 + {err};", file = c_f)
 else:
     for _, QP in filtered_df.iterrows():
         
@@ -100,12 +103,12 @@ else:
 e_f.close()
 
 
-q_f = open("QP_creator.madx", "w")
-qps_df = get_qp(df)
-
-for _, QP in qps_df.iterrows():
-    
-    name = QP["NAME"]
-    
-    print(f'PRINTF, TEXT="{name} length strength: %f, %f",VALUE= {name}->L, {name}->K1 ;', file = q_f) 
+# q_f = open("QP_creator.madx", "w")
+# qps_df = get_qp(df)
+#
+# for _, QP in qps_df.iterrows():
+#
+#     name = QP["NAME"]
+#
+#     print(f'PRINTF, TEXT="{name} length strength: %f, %f",VALUE= {name}->L, {name}->K1 ;', file = q_f) 
 
