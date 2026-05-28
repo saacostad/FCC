@@ -13,6 +13,13 @@ zy = 0.000001;
 zpy = 0;
 
 
+! THIS ONE IS TO CHECK BEHAVIOUR WITH DIFFERENT delta0
+! zx = 0.00002345;
+! zpx = 0;
+! zy = 0.000000782;
+! zpy = 0;
+
+
 PTC_CREATE_UNIVERSE;
 PTC_CREATE_LAYOUT,model=2,method=6, nst=10;
 PTC_START,x =zx, px =zpx, y = zy, py = zpy ;

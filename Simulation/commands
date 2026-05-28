@@ -1,39 +1,60 @@
-
 home_dir=$(dirname "$(readlink -f "$0")")
-###Hacer una copia exacta del directorio apj/ en su home_dir
-###Descargar la última version de madx en  https://mad.web.cern.ch/mad/, copiarla en algún directorio (en este ejemplo $home_dir/bin/), darle un nombre que la identifique (en este ejemplo madx), y si es necesario modificar la siguiente linea 
 madx_program=$home_dir/madx
-###Es posible que tenga que cambiar python por otro nombre
-###################Nominal Files ############################
 
-echo $home_dir
+#----------------------------------------------------------------------------------------------------
+#		GENERACIÓN DE ARCHIVOS NOMINALES
+#----------------------------------------------------------------------------------------------------
+
 
 # python  "$home_dir/get_nom_files.py" -id="$home_dir/fcc_ee"  -od="$home_dir/fcc_ee_test_simulation/" -b=1 -mx="$madx_program" --accel="fcc_ee"  -nc
 # python  "$home_dir/get_nom_files.py" -id="$home_dir/fcc_ee"  -od="$home_dir/fcc_ee_corrections/" -b=1 -mx="$madx_program" --accel="fcc_ee"  -nc
 
-# ####################################################TBT Simulations for both beams IR1 (arbitrary number of turns) ######################################################################
+
+#----------------------------------------------------------------------------------------------------
+#		GENERACIÓN DE ERRORES
+#----------------------------------------------------------------------------------------------------
+
+# Este es para generar CON errores
+python tools/CreateTBT.py -if fcc_ee_test_simulation/twiss.dat -ip IP.2 -w 300 -re -rs 3e-6
+
+# Este es para generar SIN errores
+# python tools/CreateTBT.py -if fcc_ee_test_simulation/twiss.dat -ip IP.2 -w 300
 
 
 
+#----------------------------------------------------------------------------------------------------
+#		SIMULACIÓN DE LA ÓRBITA CON ERRORES
+#----------------------------------------------------------------------------------------------------
 
+# Para correr la simulación con nomás los errores
 python  "$home_dir/tbt_simulator.py"   -b=1 -ip=2  -ef="$home_dir/IR_errors.madx"    -md="$home_dir/fcc_ee_test_simulation/"  -od="$home_dir/fcc_ee_test_simulation/tbt/" -tw -n=100 -mx="$madx_program" --accel="fcc_ee"
 
+# Para calcular su acción y fase
+python  "$home_dir/ActionPhaseJump.py" -b=1 --accel="fcc_ee" -ip=2 -ab=BPMSW.1L2.B1 -pb=BPMSW.1L2.B1 -lb=BPMSW.1L2.B1 -rb=BPMSW.1R2.B1  -sf="$home_dir/fcc_ee_test_simulation/tbt/sim_tbt/sim_tbt.sdds.new"   -md="$home_dir/fcc_ee_test_simulation/"    -ml="$home_dir/fcc_ee_test_simulation/tbt/lattice_err.asc"  -sk="$home_dir/fcc_ee_test_simulation/tbt_simu/ip.results"    -od="$home_dir/fcc_ee_test_simulation/tbt_simu" 
 
-python  "$home_dir/ActionPhaseJump.py" -b=1 --accel="fcc_ee" -ip=2 -ab=BPMSW.1L2.B1 -pb=BPMSW.1L2.B1 -lb=BPMSW.1L2.B1 -rb=BPMSW.1R2.B1  -sf="$home_dir/fcc_ee_test_simulation/tbt/sim_tbt/sim_tbt.sdds.new"   -md="$home_dir/fcc_ee_test_simulation/"    -ml="$home_dir/fcc_ee_test_simulation/tbt/lattice_err.asc"  -sk="$home_dir/fcc_ee_test_simulation/tbt_simu/ip.results"    -od="$home_dir/fcc_ee_test_simulation/tbt_simu" -p
 
 
+#================================================================================
+# 		GENERAR CORRECCIONES
+#================================================================================
 
+# Para calcular los errores
 python FCCcorrections.py
 
+#----------------------------------------------------------------------------------------------------
+#		SIMULACIÓN DE LA ÓRBITA CON ERRORES + CORRECCIONES
+#----------------------------------------------------------------------------------------------------
 
-
-
-#================================================================================
-# CHECK CORRECTIONS MADE
-#================================================================================
-
-
+# Simular errores+correcciones
 python  "$home_dir/tbt_simulator.py"   -b=1 -ip=2  -ef="$home_dir/IR_errors+corrections.madx"    -md="$home_dir/fcc_ee_corrections/"  -od="$home_dir/fcc_ee_corrections/tbt/" -tw -n=100 -mx="$madx_program" --accel="fcc_ee"
 
+# Revisar acción y fase
+python  "$home_dir/ActionPhaseJump.py" -b=1 --accel="fcc_ee" -ip=2 -ab=BPMSW.1L2.B1 -pb=BPMSW.1L2.B1 -lb=BPMSW.1L2.B1 -rb=BPMSW.1R2.B1  -sf="$home_dir/fcc_ee_corrections/tbt/sim_tbt/sim_tbt.sdds.new"   -md="$home_dir/fcc_ee_corrections/"    -ml="$home_dir/fcc_ee_corrections/tbt/lattice_err.asc"  -sk="$home_dir/fcc_ee_corrections/tbt_simu/ip.results"    -od="$home_dir/fcc_ee_corrections/tbt_simu"
 
-python  "$home_dir/ActionPhaseJump.py" -b=1 --accel="fcc_ee" -ip=2 -ab=BPMSW.1L2.B1 -pb=BPMSW.1L2.B1 -lb=BPMSW.1L2.B1 -rb=BPMSW.1R2.B1  -sf="$home_dir/fcc_ee_corrections/tbt/sim_tbt/sim_tbt.sdds.new"   -md="$home_dir/fcc_ee_corrections/"    -ml="$home_dir/fcc_ee_corrections/tbt/lattice_err.asc"  -sk="$home_dir/fcc_ee_corrections/tbt_simu/ip.results"    -od="$home_dir/fcc_ee_corrections/tbt_simu" -p
+
+#================================================================================
+# 		GRAFICAR RESULTADOS
+#================================================================================
+
+# Graficar resultados
+gnuplot --persist plots.gp

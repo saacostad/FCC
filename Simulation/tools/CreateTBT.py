@@ -90,18 +90,20 @@ if args.random_flag:
 
         # We'll write the errors for each of the quadrupoles 
         err = np.random.normal(0.0, float(args.random_sigma))
-        print(f"{name}->K1 = {name}->K1 + {err};", file = e_f)
-        print(f"{name}->K1 = {name}->K1 + {err};", file = c_f)
+        sign = "+" if err > 0.0 else "-"
+        print(f"{name}->K1 = {name}->K1{sign}{abs(err)};", file = e_f)
+        print(f"{name}->K1 = {name}->K1{sign}{abs(err)};", file = c_f)
 else:
     for _, QP in filtered_df.iterrows():
         
         name = QP["NAME"] # We get the name of the QP  
 
         # We'll write the errors for each of the quadrupoles 
-        print(f"{name}, K1 := K1{name.split('.')[0]};", file = e_f)
+        print(f"{name}->K1 = {name}->K1+0.0;", file = e_f)
+        print(f"{name}->K1 = {name}->K1+0.0;", file = c_f)
 
 e_f.close()
-
+c_f.close()
 
 # q_f = open("QP_creator.madx", "w")
 # qps_df = get_qp(df)

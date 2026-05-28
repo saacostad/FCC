@@ -66,3 +66,5 @@ set ylabel "P"
 plot \
     errHP u (filtH($1,$3)):(filtH($1,$4)) w l ls 1 title "errors", \
     corrHP u (filtH($1,$3)):(filtH($1,$4)) w l ls 2 title "errors+corrections"
+
+pause -1 "enter or whatever"

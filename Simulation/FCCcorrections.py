@@ -3,9 +3,9 @@ from tools.FCC_matricial_system import createSystem_base2 as createSystem   # Th
 import pandas as pd
 from scipy.optimize import least_squares
 
+# TODO: meterle ruido a las tbt [ arcos = 0.1mm, IR = 0.2mm ]
+# TODO: revisar con el beta-beating
 
-# TODO: if this works, I'll probably have to make all of these variables accessible via parsing
-# FIX: it kinda worked so better to think about parsing
 
 # Working now with IP.2
 IP = 2
@@ -22,9 +22,6 @@ integrals_path = "fcc_ee_test_simulation/integrals.dat"
 
 
 # Arcs regions to calculate previous and posterior APJ values
-
-
-
 # TODO: check the quadrupoles for IP 1 and 4
 def get_arc(IP):
     leftArc = None 
@@ -43,7 +40,7 @@ def get_arc(IP):
     elif IP == 7 or IP == 4:
         leftArc = (60000, 66000)
         rightArc = (69000, 80000)
-        QUADRUPOLES_SELECTION = ["QC4L.1", "QC3L.1", "QC0.2", "QC3.2"]
+        QUADRUPOLES_SELECTION = ["QC4L.3", "QC3L.3", "QC0.4", "QC3.4"]
     elif IP == 8 or IP == 1:
         leftArc = (80000, 88000)
         rightArc = (1000, 14000)
@@ -239,7 +236,8 @@ if __name__ == '__main__':
     new_lines = []
 
     for line in lines:
-        # Get the quadrupole name (before '->')
+        # Get the quadrupole name
+        # TODO: this only works when I add errors, as if there are none, the -> will never appear
         quad_name = line.split("->")[0].strip()
 
         if quad_name in err_dict:
