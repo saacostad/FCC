@@ -57,4 +57,4 @@ python  "$home_dir/ActionPhaseJump.py" -b=1 --accel="fcc_ee" -ip=2 -ab=BPMSW.1L2
 #================================================================================
 
 # Graficar resultados
-gnuplot --persist plots.gp
+./plots.sh

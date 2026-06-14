@@ -11,6 +11,15 @@ import datetime
 
 version= "Santiago's version 0.9"
 
+'''
+ADDING NOISE TO BPMs DATA
+
+For this, we'll simply add gaussian noise at data processing 
+'''
+
+sigma_x = 1e-4
+sigma_y = 1e-4
+
 print("tbt_simulator Version", version)
 
 def multiturn2sddsnew(in_file,out_file):
@@ -50,8 +59,11 @@ def multiturn2sddsnew(in_file,out_file):
                 else:
                     # Or simply add the data of interest of each measurement
                     turn.append(int(float(sline[colturn])))
-                    x.append(float(sline[colx])*1000.0)
-                    y.append(float(sline[coly])*1000.0)
+
+
+                    # HACK: here is where we apply the noise 
+                    x.append(float(sline[colx])*1000.0 + np.random.normal(0, sigma_x))
+                    y.append(float(sline[coly])*1000.0 + np.random.normal(0, sigma_y))
                     s.append(sline[cols])
 
     

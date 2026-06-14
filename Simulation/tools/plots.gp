@@ -25,7 +25,7 @@ filtV(x,val) = (x==1 ? val : 1/0)
 filtH(x,val) = (x==0 ? val : 1/0)
 
 ### --- Plot 1 ---
-set terminal qt 1
+set terminal qt 0
 set title "V Action"
 set xlabel "s"
 set ylabel "J"
@@ -57,8 +57,9 @@ plot \
     corrVP u (filtV($1,$3)):(filtV($1,$4)) w l ls 2 title "errors+corrections"
 
 
+
 ### --- Plot 4 ---
-set terminal qt 4
+set terminal qt 3
 set title "H Phase"
 set xlabel "s"
 set ylabel "P"
