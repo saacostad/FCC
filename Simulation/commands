@@ -15,10 +15,13 @@ madx_program=$home_dir/madx
 #----------------------------------------------------------------------------------------------------
 
 # Este es para generar CON errores
-python tools/CreateTBT.py -if fcc_ee_test_simulation/twiss.dat -ip IP.2 -w 300 -re -rs 3e-6
+python tools/CreateTBT.py -if fcc_ee_test_simulation/twiss.dat -ip IP.2 -w 300 -re -rs 6e-6
 
 # Este es para generar SIN errores
 # python tools/CreateTBT.py -if fcc_ee_test_simulation/twiss.dat -ip IP.2 -w 300
+
+# Este es para probarlo con las betas nuevas
+# python tools/CreateTBT.py -if fcc_ee_test_simulation/twiss.dat -ip IP.2 -w 30 -bt
 
 
 
@@ -57,4 +60,7 @@ python  "$home_dir/ActionPhaseJump.py" -b=1 --accel="fcc_ee" -ip=2 -ab=BPMSW.1L2
 #================================================================================
 
 # Graficar resultados
-./plots.sh
+./tools/plots.sh
+
+# Graficar beta-beating
+python tools/beta-beating.py

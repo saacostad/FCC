@@ -24,7 +24,6 @@ import datetime
 
 
 # BIG TODO 
-# TODO: por alguna extraña razón, el avermax no me está guardando todos los BPMs. Esto es un error en el MT2avermax, posiblemente 
 # en el diforb a sorted_lines_readz puesto que es aquí en donde se guarda la lista con la cual, finalmente, creamos el avermax.
 
 
@@ -382,7 +381,7 @@ def JyP_trip(averact, averphase, nameel,  psiz,    nm,   betzn,psizn,   w, bw, b
     return jota, delta2
 
 
-
+even_flag = True
 
 def Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpml,bpmr,selx,nameelx,psix,betx,sL_begin,sR_end,nsigma,selxe,nameelxe,psixe,betxe,wx,bwx,s_acdipole,plane,beam,bpm_phase,ip, method, accel):
     
@@ -471,6 +470,12 @@ def Arc_Trip_APs(sdds_col, sort_linesx,diforbx,bpml,bpmr,selx,nameelx,psix,betx,
         # HACK: it returns true if accel is fcc
         def even_bpm(bpm):
             if accel == "fcc_ee":
+                
+                # global even_flag 
+                # even_flag = not even_flag 
+                # return even_flag
+
+
                 return True 
 
             digit1 = int(bpm[5])
@@ -2036,6 +2041,7 @@ nameely,sely,bety,psiy,alfy=leer_beta_mu3(latticef,'-y')
 
 if accel == "fcc_ee":
     Is_ip_ap_kmod, Iskmod ,  Iserrlattice, Isbpms, Isbpmlr ,trying_2run4quads = False, False, True, True, True, False
+    # Is_ip_ap_kmod, Iskmod ,  Iserrlattice, Isbpms, Isbpmlr ,trying_2run4quads = False, False, False, True, True, False
 else:
     Is_ip_ap_kmod, Iskmod ,  Iserrlattice, Isbpms, Isbpmlr ,trying_2run4quads = inp_conditions(args,nameelx,nameely,'nominal', ip, beam,accel)
 

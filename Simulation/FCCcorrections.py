@@ -31,7 +31,7 @@ def get_arc(IP):
     if IP == 2:
         leftArc = (15000, 20000)
         rightArc = (23500, 30000)
-        # QUADRUPOLES_SELECTION = ["QC4L.1", "QC3L.1",  "QC0L.1"  , "QC0.2", "QC3.2"]
+        # QUADRUPOLES_SELECTION = ["QC4L.1", "QC3.2"]
         QUADRUPOLES_SELECTION = ["QC4L.1", "QC3L.1", "QC0.2", "QC3.2"]
     elif IP == 5 or IP == 3:
         leftArc = (32000, 41900)
