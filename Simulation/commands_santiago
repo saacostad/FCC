@@ -1,0 +1,66 @@
+home_dir=$(dirname "$(readlink -f "$0")")
+madx_program=$home_dir/madx
+
+#----------------------------------------------------------------------------------------------------
+#		GENERACIÓN DE ARCHIVOS NOMINALES
+#----------------------------------------------------------------------------------------------------
+
+
+# python  "$home_dir/get_nom_files.py" -id="$home_dir/fcc_ee"  -od="$home_dir/fcc_ee_test_simulation/" -b=1 -mx="$madx_program" --accel="fcc_ee"  -nc
+# python  "$home_dir/get_nom_files.py" -id="$home_dir/fcc_ee"  -od="$home_dir/fcc_ee_corrections/" -b=1 -mx="$madx_program" --accel="fcc_ee"  -nc
+
+
+#----------------------------------------------------------------------------------------------------
+#		GENERACIÓN DE ERRORES
+#----------------------------------------------------------------------------------------------------
+
+# Este es para generar CON errores
+python tools/CreateTBT.py -if fcc_ee_test_simulation/twiss.dat -ip IP.2 -w 300 -re -rs 6e-6
+
+# Este es para generar SIN errores
+# python tools/CreateTBT.py -if fcc_ee_test_simulation/twiss.dat -ip IP.2 -w 300
+
+# Este es para probarlo con las betas nuevas
+# python tools/CreateTBT.py -if fcc_ee_test_simulation/twiss.dat -ip IP.2 -w 30 -bt
+
+
+
+#----------------------------------------------------------------------------------------------------
+#		SIMULACIÓN DE LA ÓRBITA CON ERRORES
+#----------------------------------------------------------------------------------------------------
+
+# Para correr la simulación con nomás los errores
+python  "$home_dir/tbt_simulator_santiago.py"   -b=1 -ip=2  -ef="$home_dir/IR_errors.madx"    -md="$home_dir/fcc_ee_test_simulation/"  -od="$home_dir/fcc_ee_test_simulation/tbt/" -tw -n=100 -mx="$madx_program" --accel="fcc_ee"
+
+# Para calcular su acción y fase
+python  APJSantiago_errors.py
+
+
+
+#================================================================================
+# 		GENERAR CORRECCIONES
+#================================================================================
+
+# Para calcular los errores
+python FCCcorrections.py
+
+#----------------------------------------------------------------------------------------------------
+#		SIMULACIÓN DE LA ÓRBITA CON ERRORES + CORRECCIONES
+#----------------------------------------------------------------------------------------------------
+
+# Simular errores+correcciones
+python  "$home_dir/tbt_simulator_santiago.py"   -b=1 -ip=2  -ef="$home_dir/IR_errors+corrections.madx"    -md="$home_dir/fcc_ee_corrections/"  -od="$home_dir/fcc_ee_corrections/tbt/" -tw -n=100 -mx="$madx_program" --accel="fcc_ee"
+
+# Revisar acción y fase
+python  APJSantiago_corrections.py
+
+
+#================================================================================
+# 		GRAFICAR RESULTADOS
+#================================================================================
+
+# Graficar resultados
+./tools/plots.sh
+
+# Graficar beta-beating
+python tools/beta-beating.py
