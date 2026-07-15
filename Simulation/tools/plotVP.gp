@@ -23,7 +23,7 @@ set xlabel "s"
 set ylabel "P"
 
 plot \
-    errVP u (filtV($1,$3)):(filtV($1,$4)) w l ls 1 title "errors", \
-    corrVP u (filtV($1,$3)):(filtV($1,$4)) w l ls 2 title "errors+corrections"
+    errVP u (filtV($1,$3)):(filtV($1,$4)) w lp ls 1 title "errors", \
+    corrVP u (filtV($1,$3)):(filtV($1,$4)) w lp ls 2 title "errors+corrections"
 
 pause -1

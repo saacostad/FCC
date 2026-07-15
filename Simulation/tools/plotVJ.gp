@@ -20,8 +20,8 @@ set xlabel "s"
 set ylabel "J"
 
 plot \
-    errVJ u (filtV($1,$3)):(filtV($1,$4)) w l ls 1 title "errors", \
-    corrVJ u (filtV($1,$3)):(filtV($1,$4)) w l ls 2 title "errors+corrections"
+    errVJ u (filtV($1,$3)):(filtV($1,$4)) w lp ls 1 title "errors", \
+    corrVJ u (filtV($1,$3)):(filtV($1,$4)) w lp ls 2 title "errors+corrections"
 
 
 pause -1

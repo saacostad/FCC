@@ -24,7 +24,7 @@ set xlabel "s"
 set ylabel "J"
 
 plot \
-    errHJ u (filtH($1,$3)):(filtH($1,$4)) w l ls 1 title "errors", \
-    corrHJ u (filtH($1,$3)):(filtH($1,$4)) w l ls 2 title "errors+corrections"
+    errHJ u (filtH($1,$3)):(filtH($1,$4)) w lp ls 1 title "errors", \
+    corrHJ u (filtH($1,$3)):(filtH($1,$4)) w lp ls 2 title "errors+corrections"
 
 pause -1
