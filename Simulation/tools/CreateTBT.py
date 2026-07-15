@@ -42,7 +42,14 @@ parser.add_argument(
         "-rs", "--random_sigma",
         help="The average dispersion of the errors (sigma of a normal)",
         dest="random_sigma"
-    )
+        )
+parser.add_argument(
+        "-bt", "--beta_test",
+        help="Beta-Beating testing: resets the corrections but not the errors",
+        dest="beta_test",
+        action="store_true"
+        )
+
 args = parser.parse_args()
 
 
@@ -79,38 +86,41 @@ df = tfs.read(input_file_path)
 filtered_df = get_elements_around_ip(df, args.IP, float(args.window))
 
 
-# Now, we'll write the errors and corrections files 
-e_f = open("IR_errors.madx",'w')
-c_f = open("IR_errors+corrections.madx", 'w')
 
-if args.random_flag:
-    for _, QP in filtered_df.iterrows():
 
-        name = QP["NAME"] # We get the name of the QP  
 
-        # We'll write the errors for each of the quadrupoles 
-        err = np.random.normal(0.0, float(args.random_sigma))
-        sign = "+" if err > 0.0 else "-"
-        print(f"{name}->K1 = {name}->K1{sign}{abs(err)};", file = e_f)
-        print(f"{name}->K1 = {name}->K1{sign}{abs(err)};", file = c_f)
+if args.beta_test: 
+    # If we'll check the beta-beating, then we will just copy the contents or the errors file to the errors+corrections 
+    e_f = open("IR_errors.madx",'r')
+    c_f = open("IR_errors+corrections.madx", 'w')
+
+    c_f.write(e_f.read())
+
 else:
-    for _, QP in filtered_df.iterrows():
-        
-        name = QP["NAME"] # We get the name of the QP  
+    # Now, we'll write the errors and corrections files 
+    e_f = open("IR_errors.madx",'w')
+    c_f = open("IR_errors+corrections.madx", 'w')
 
-        # We'll write the errors for each of the quadrupoles 
-        print(f"{name}->K1 = {name}->K1+0.0;", file = e_f)
-        print(f"{name}->K1 = {name}->K1+0.0;", file = c_f)
+    if args.random_flag:
+        for _, QP in filtered_df.iterrows():
+
+            name = QP["NAME"] # We get the name of the QP  
+
+            # We'll write the errors for each of the quadrupoles 
+            err = np.random.normal(0.0, float(args.random_sigma))
+            sign = "+" if err > 0.0 else "-"
+            print(f"{name}->K1 = {name}->K1{sign}{abs(err)};", file = e_f)
+            print(f"{name}->K1 = {name}->K1{sign}{abs(err)};", file = c_f)
+    else:
+        for _, QP in filtered_df.iterrows():
+            
+            name = QP["NAME"] # We get the name of the QP  
+
+            # We'll write the errors for each of the quadrupoles 
+            print(f"{name}->K1 = {name}->K1+0.0;", file = e_f)
+            print(f"{name}->K1 = {name}->K1+0.0;", file = c_f)
 
 e_f.close()
 c_f.close()
 
-# q_f = open("QP_creator.madx", "w")
-# qps_df = get_qp(df)
-#
-# for _, QP in qps_df.iterrows():
-#
-#     name = QP["NAME"]
-#
-#     print(f'PRINTF, TEXT="{name} length strength: %f, %f",VALUE= {name}->L, {name}->K1 ;', file = q_f) 
 
