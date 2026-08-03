@@ -2,10 +2,13 @@ import numpy as np
 from tools.FCC_matricial_system import createSystem_base2 as createSystem   # This is the left hand side of the equation
 import pandas as pd
 from scipy.optimize import least_squares
+import csv
 
 # TODO: meterle ruido a las tbt [ arcos = 0.1mm, IR = 0.2mm ]
 # TODO: revisar con el beta-beating
 
+
+print("\n\t\t CORRECTIONS CALCULATION")
 
 # Working now with IP.2
 IP = 2
@@ -184,15 +187,18 @@ def get_quadrupoles_lattice_functions(path, QPlist):
 """
 
 if __name__ == '__main__':
-
+    
+    print("Getting arcs sections...")
     leftArc, rightArc, QUADRUPOLES_SELECTION = get_arc(IP)
-
+    
+    print("Creating the system...")
     # Initial guess for the errors
     ERR_init = np.zeros(len(QUADRUPOLES_SELECTION))
 
     # First, we get the right hand side vector of the system 
     RHS, delta0_x, delta0_y = get_observed_system(MUXpath, MUYpath, PHASEXpath, PHASEYpath)
 
+    print("Reading quadrupoles' params")
     # In order to create the left hand side, we need to retreive the lattice functions of the quadrupoles of interest
     latticeDF = get_quadrupoles_lattice_functions(integrals_path, QUADRUPOLES_SELECTION)
 
@@ -213,12 +219,21 @@ if __name__ == '__main__':
         # Return the residual
         return np.array([Sx, Cx, -Sy, -Cy]) - RHS
 
-
+    print("Solving the system")
     """ CALCULATE THE ERRORS STIMATIONS """
     ERR_estimations = least_squares(residual, ERR_init, ftol = 1e-12).x
     
 
-    print("Errors estimation:")
+    # Here we save these errors for a error study
+    corrections_path = "corrections.csv"
+
+    # Open in append mode ('a') and write the list as a new row
+    with open(corrections_path, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(ERR_estimations)
+
+
+    print("="*20 + "\nErrors estimation: \n")
     print(QUADRUPOLES_SELECTION)
     print(ERR_estimations)
 

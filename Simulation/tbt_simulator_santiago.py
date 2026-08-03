@@ -17,8 +17,6 @@ ADDING NOISE TO BPMs DATA
 For this, we'll simply add gaussian noise at data processing 
 '''
 
-sigma_x = 0e-3
-sigma_y = 0e-3
 
 print("tbt_simulator Version", version)
 

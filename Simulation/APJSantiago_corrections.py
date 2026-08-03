@@ -84,12 +84,10 @@ Ys_mean = np.asarray(np.mean(Ys, axis = 1))
 
 # TODO: without errors it works amazingly good if we add the mean
 # HACK: well there are still jumps but not that big. At least this will work to generalize the APJ
-Xs_new = Xs - Xs_mean[:, np.newaxis]
-Ys_new = Ys - Ys_mean[:, np.newaxis]
 
+Xs = Xs - Xs_mean[:, np.newaxis]
+Ys = Ys - Ys_mean[:, np.newaxis]
 
-Xs = Xs_new
-Ys = Ys_new
 
 # Obtenemos los elementos en las optics de momento
 optics_elements_names = Xs.loc[::, 0].index

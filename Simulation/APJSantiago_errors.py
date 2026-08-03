@@ -9,10 +9,12 @@ from modules.ActionPhaseJump import calculate_APJ
 from modules.orbit_tools import avermax   
 
 
+
+sigma_x = 1e-3
+sigma_y = 1e-3
+
 print(""" \n\n \t\tACTION AND PHASE JUMP
 \t\t  Santiago's version \n """ )
-
-
 
 # ---------------------------------------------
 #           FUNCTION TO SAVE DATA
@@ -68,8 +70,13 @@ to_data = read_tbt(trackone_path)
 # Extraemos los datos
 particle = to_data.matrices[0]
 
-Xs = pd.DataFrame(particle.X)
-Ys = pd.DataFrame(particle.Y)
+Xs = pd.DataFrame(particle.X) 
+Ys = pd.DataFrame(particle.Y) 
+
+# Agregamos el ruido si le metimos
+Xs += np.random.normal(loc=0.0, scale=sigma_x, size=Xs.shape)
+Ys += np.random.normal(loc=0.0, scale=sigma_y, size=Ys.shape)
+
 
 # -----------------------------------
 #       HACEMOS LA TRAYECTORIA DIFF 
@@ -84,12 +91,10 @@ Ys_mean = np.asarray(np.mean(Ys, axis = 1))
 
 # TODO: without errors it works amazingly good if we add the mean
 # HACK: well there are still jumps but not that big. At least this will work to generalize the APJ
-Xs_new = Xs - Xs_mean[:, np.newaxis]
-Ys_new = Ys - Ys_mean[:, np.newaxis]
 
+Xs = Xs - Xs_mean[:, np.newaxis]
+Ys = Ys - Ys_mean[:, np.newaxis]
 
-Xs = Xs_new
-Ys = Ys_new
 
 # Obtenemos los elementos en las optics de momento
 optics_elements_names = Xs.loc[::, 0].index

@@ -6,10 +6,10 @@ madx_program=$home_dir/madx
 #----------------------------------------------------------------------------------------------------
 
 # Este es para generar CON errores
-python tools/CreateTBT.py -if fcc_ee_test_simulation/twiss.dat -ip IP.2 -w 300 -re -rs 6e-6
+# python tools/CreateTBT.py -if fcc_ee_test_simulation/twiss.dat -ip IP.2 -w 300 -re -rs 6e-6
 
 # Esto es para poder modificar errores y aumentar el beta-beating
-# python tools/CreateTBT.py -if fcc_ee_test_simulation/twiss.dat -ip IP.2 -w 300 -bt
+python tools/CreateTBT.py -if fcc_ee_test_simulation/twiss.dat -ip IP.2 -w 300 -bt
 
 
 #----------------------------------------------------------------------------------------------------

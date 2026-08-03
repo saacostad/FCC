@@ -95,14 +95,14 @@ def avermax(twiss_data, Xs, Ys, arc, ref_bpm, treshold = np.pi/2, log = False):
         # -- Same but for the y axis
         
         if  abs(neg_Delta_delta_y) < treshold:
-            y_turns.append(Ys[col].to_numpy())
+            y_turns.append(-Ys[col].to_numpy())
             count_y += 1
 
         # Now we also select the negative maxima
         if abs(Delta_delta_y) < treshold:
             
             # But here, we'll flip the sign
-            y_turns.append(-Ys[col].to_numpy())
+            y_turns.append(Ys[col].to_numpy())
             count_y += 1
     
     # Lastly, we get the mean of the turns and multiply by 1000
